@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/main_screen.dart';
@@ -8,7 +9,6 @@ import 'screens/my_orders_screen.dart';
 import 'screens/payment_methods_screen.dart';
 import 'screens/help_center_screen.dart';
 import 'screens/settings_screen.dart';
-import 'services/user_service.dart';
 import 'theme/app_colors.dart';
 
 void main() async {
@@ -22,15 +22,11 @@ void main() async {
     ),
   );
 
-  // Cek sesi login yang tersimpan
-  final isLoggedIn = await UserService().loadSession();
-
-  runApp(ThriftinApp(isLoggedIn: isLoggedIn));
+  runApp(const ThriftinApp());
 }
 
 class ThriftinApp extends StatelessWidget {
-  final bool isLoggedIn;
-  const ThriftinApp({super.key, required this.isLoggedIn});
+  const ThriftinApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +58,10 @@ class ThriftinApp extends StatelessWidget {
         splashColor: AppColors.primary.withValues(alpha: 0.1),
         highlightColor: AppColors.primary.withValues(alpha: 0.05),
       ),
-      // Jika sudah login sebelumnya, langsung ke home. Jika tidak, ke login.
-      initialRoute: isLoggedIn ? '/home' : '/login',
+      // Selalu mulai dari splash screen
+      initialRoute: '/splash',
       routes: {
+        '/splash': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const MainScreen(),

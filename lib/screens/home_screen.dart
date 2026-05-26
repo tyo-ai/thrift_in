@@ -5,7 +5,7 @@ import '../services/product_service.dart';
 import 'saved_screen.dart';
 import 'notifications_screen.dart';
 import 'product_detail_screen.dart';
-
+import 'live_bidding_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -114,11 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
         leadingWidth: 44,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(
-              Icons.menu_rounded,
-              color: AppColors.primary,
-              size: 22,
-            ),
+            icon: Icon(Icons.menu_rounded, color: AppColors.primary, size: 22),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
@@ -225,11 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.circle,
-            size: 7,
-            color: Color(0xFFFF5A3D),
-          ),
+          Icon(Icons.circle, size: 7, color: Color(0xFFFF5A3D)),
           SizedBox(width: 5),
           Text(
             'Lelang Sedang Berlangsung',
@@ -259,7 +251,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         TextButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LiveBiddingScreen()),
+            );
+          },
           style: TextButton.styleFrom(
             padding: EdgeInsets.zero,
             minimumSize: const Size(20, 24),
@@ -557,9 +554,9 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: _products.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.67,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 1.05,
         ),
         itemBuilder: (context, index) {
           final product = _products[index];
@@ -584,6 +581,32 @@ class _HomeScreenState extends State<HomeScreen> {
     final isFavorite =
         product['isFavorite'] == 1 || product['isFavorite'] == true;
 
+    Future<void> toggleFavorite() async {
+      final newValue = !isFavorite;
+      final productId = product['id'];
+
+      setState(() {
+        _products[index] = Map<String, dynamic>.from(product)
+          ..['isFavorite'] = newValue ? 1 : 0;
+
+        if (productId != null) {
+          final rawIdx = _allProducts.indexWhere((p) => p['id'] == productId);
+          if (rawIdx != -1) {
+            _allProducts[rawIdx] = Map<String, dynamic>.from(
+              _allProducts[rawIdx],
+            )..['isFavorite'] = newValue ? 1 : 0;
+          }
+        }
+      });
+
+      final parsedId = productId is int
+          ? productId
+          : int.tryParse(productId?.toString() ?? '');
+      if (parsedId != null) {
+        await ProductService().toggleFavorite(parsedId, newValue);
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -600,57 +623,36 @@ class _HomeScreenState extends State<HomeScreen> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
             children: [
               _buildImage(
                 _text(product['imageUrl'], ''),
-                height: 120,
+                height: 88,
                 width: double.infinity,
               ),
               Positioned(
-                top: 8,
-                right: 8,
-                child: GestureDetector(
-                  onTap: () async {
-                    final newValue = !isFavorite;
-
-                    final productId = product['id'];
-
-                    setState(() {
-                      _products[index] = Map<String, dynamic>.from(product)
-                        ..['isFavorite'] = newValue ? 1 : 0;
-                      
-                      if (productId != null) {
-                        final rawIdx = _allProducts.indexWhere((p) => p['id'] == productId);
-                        if (rawIdx != -1) {
-                          _allProducts[rawIdx] = Map<String, dynamic>.from(_allProducts[rawIdx])
-                            ..['isFavorite'] = newValue ? 1 : 0;
-                        }
-                      }
-                    });
-
-                    if (productId != null) {
-                      await ProductService().toggleFavorite(
-                        productId,
-                        newValue,
-                      );
-                    }
-                  },
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isFavorite
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      size: 17,
-                      color: AppColors.primary,
-                    ),
+                top: 6,
+                right: 6,
+                child: IconButton(
+                  onPressed: toggleFavorite,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 40,
+                    height: 40,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.95),
+                    shape: const CircleBorder(),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: Icon(
+                    isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    size: 18,
+                    color: isFavorite ? AppColors.error : AppColors.primary,
                   ),
                 ),
               ),
@@ -668,28 +670,28 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(9, 8, 9, 0),
+            padding: const EdgeInsets.fromLTRB(8, 5, 8, 0),
             child: Row(
               children: [
                 const Icon(
                   Icons.star_rounded,
-                  size: 14,
+                  size: 12,
                   color: Color(0xFFFFB800),
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 Text(
                   _text(product['rating'], '4.8'),
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 Text(
                   '(${_text(product['reviewCount'], '15')})',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9.5,
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
@@ -698,36 +700,36 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(9, 4, 9, 0),
+            padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
             child: Text(
               _text(product['name'], 'Nama Produk'),
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
-                height: 1.15,
+                fontSize: 11.5,
+                height: 1.1,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(9, 4, 9, 0),
+            padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
             child: Row(
               children: [
                 Icon(
                   Icons.verified_rounded,
                   color: AppColors.primary,
-                  size: 12,
+                  size: 11,
                 ),
-                const SizedBox(width: 3),
+                const SizedBox(width: 2),
                 Expanded(
                   child: Text(
-                    '${_text(product['storeName'], 'Toko')} • ${_text(product['location'], 'Surakarta')}',
+                    '${_text(product['storeName'], 'Toko')} · ${_text(product['location'], 'Surakarta')}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 9.5,
+                      fontSize: 9,
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
                     ),
@@ -736,13 +738,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const Spacer(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(9, 0, 9, 10),
+            padding: const EdgeInsets.fromLTRB(8, 3, 8, 7),
             child: Text(
               _formatPrice(product['price']),
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
               ),

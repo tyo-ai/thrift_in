@@ -113,6 +113,49 @@ class UserService {
     return count;
   }
 
+  Future<int> updateBio(int userId, String bio) async {
+    final db = await _dbHelper.database;
+    int count = await db.update(
+      'users',
+      {'bio': bio},
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+
+    if (count > 0 && currentUserId == userId) {
+      final results = await db.query('users', where: 'id = ?', whereArgs: [userId]);
+      if (results.isNotEmpty) {
+        currentUser = Map<String, dynamic>.from(results.first);
+      }
+    }
+
+    return count;
+  }
+
+  Future<int> updateBioAndPhoto(int userId, String bio, String? photoPath) async {
+    final db = await _dbHelper.database;
+    final Map<String, dynamic> data = {'bio': bio};
+    if (photoPath != null) {
+      data['photo_path'] = photoPath;
+    }
+    int count = await db.update(
+      'users',
+      data,
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+
+    if (count > 0 && currentUserId == userId) {
+      final results = await db.query('users', where: 'id = ?', whereArgs: [userId]);
+      if (results.isNotEmpty) {
+        currentUser = Map<String, dynamic>.from(results.first);
+      }
+    }
+
+    return count;
+  }
+
+
   Future<void> logout() async {
     currentUser = null;
     await _clearSession(); // Hapus sesi tersimpan

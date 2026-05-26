@@ -130,6 +130,20 @@ class _LiveBiddingGridCardState extends State<LiveBiddingGridCard> {
   int _highestBid = 0;
   int _bidsCount = 0;
 
+  int _parsePrice(dynamic value) {
+    final raw = value?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    return int.tryParse(raw) ?? 0;
+  }
+
+  String _formatPrice(dynamic value) {
+    final price = value is int ? value : _parsePrice(value);
+    final formatted = price.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (match) => '${match[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -152,9 +166,9 @@ class _LiveBiddingGridCardState extends State<LiveBiddingGridCard> {
     final item = widget.item;
     final imageUrl = item['imageUrl'] as String;
     final bool isNetwork = imageUrl.startsWith('http');
-    final String currentPrice = _highestBid > 0 
-        ? 'Rp $_highestBid' 
-        : 'Rp ${item['price']}';
+    final String currentPrice = _highestBid > 0
+        ? _formatPrice(_highestBid)
+        : _formatPrice(item['price']);
 
     return GestureDetector(
       onTap: () {

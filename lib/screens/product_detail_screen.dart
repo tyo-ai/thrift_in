@@ -85,9 +85,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return "$hours:$minutes:$seconds";
   }
 
+  int _parsePrice(dynamic value) {
+    final raw = value?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    return int.tryParse(raw) ?? 0;
+  }
+
+  String _formatPrice(dynamic value) {
+    final price = value is int ? value : _parsePrice(value);
+    final formatted = price.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (match) => '${match[1]}.',
+    );
+    return 'Rp $formatted';
+  }
+
   void _showBidDialog() {
     final TextEditingController bidController = TextEditingController();
-    final int minBid = _highestBid > 0 ? _highestBid + 10000 : int.parse(widget.product['price'].replaceAll(RegExp(r'[^0-9]'), '')) + 10000;
+    final int minBid = _highestBid > 0
+        ? _highestBid + 10000
+        : _parsePrice(widget.product['price']) + 10000;
 
     showDialog(
       context: context,
@@ -98,16 +114,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tawaran saat ini: Rp $_highestBid'),
+            Text('Tawaran saat ini: ${_formatPrice(_highestBid)}'),
             const SizedBox(height: 8),
-            Text('Minimal tawaran: Rp $minBid', style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
+            Text(
+              'Minimal tawaran: ${_formatPrice(minBid)}',
+              style: const TextStyle(fontSize: 12, color: AppColors.textHint),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: bidController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 prefixText: 'Rp ',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -119,17 +140,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final amountStr = bidController.text.replaceAll(RegExp(r'[^0-9]'), '');
+              final amountStr = bidController.text.replaceAll(
+                RegExp(r'[^0-9]'),
+                '',
+              );
               if (amountStr.isEmpty) return;
               final amount = int.parse(amountStr);
-              
+
               if (amount < minBid) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tawaran terlalu rendah')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Tawaran terlalu rendah')),
+                );
                 return;
               }
-              
+
               if (UserService.currentUserId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Silakan login terlebih dahulu')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Silakan login terlebih dahulu'),
+                  ),
+                );
                 return;
               }
 
@@ -141,13 +171,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 buyerId: UserService.currentUserId!,
                 amount: amount,
               );
-              
+
               if (!mounted) return;
               navigator.pop();
               _loadBids();
-              messenger.showSnackBar(const SnackBar(content: Text('Tawaran berhasil ditempatkan')));
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Tawaran berhasil ditempatkan')),
+              );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Bid'),
           ),
         ],
@@ -155,226 +190,414 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  String _productText(String key, String fallback) {
+    final value = widget.product[key]?.toString().trim();
+    return value == null || value.isEmpty ? fallback : value;
+  }
+
+  String get _title => _productText('name', 'Harvard Vintage Varsity');
+  String get _category => _productText('category', 'Pakaian');
+  String get _condition => _productText('condition', 'Pernah Dipakai');
+  String get _badge => _productText('badge', _isBid ? 'Langka' : 'Baru');
+  String get _storeName => _productText('storeName', 'Vintage Heritage');
+  String get _imageUrl => _productText(
+    'imageUrl',
+    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+  );
+
   @override
   Widget build(BuildContext context) {
     final item = widget.product;
-    final imageUrl = item['imageUrl'] as String;
-    final isNetwork = imageUrl.startsWith('http');
-    
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      body: Stack(
+      body: Column(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 100),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: Stack(
               children: [
-                SizedBox(
-                  height: 400,
-                  width: double.infinity,
-                  child: Stack(
-                    children: [
-                      isNetwork
-                          ? Image.network(imageUrl, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
-                          : Image.file(File(imageUrl), fit: BoxFit.cover, width: double.infinity, height: double.infinity),
-                    ],
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.all(20),
+                SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _buildTag(item['category'] ?? 'Kategori'),
-                          const SizedBox(width: 8),
-                          _buildTag(item['condition'] ?? 'Kondisi'),
-                          if (item['badge'] != null) ...[
-                            const SizedBox(width: 8),
-                            _buildTag(item['badge'], isHighlighted: true),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      Text(
-                        item['name'],
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary, height: 1.2),
-                      ),
-                      const SizedBox(height: 20),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _isBid ? 'Bid Saat Ini' : 'Harga',
-                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _isBid 
-                                    ? (_highestBid > 0 ? 'Rp $_highestBid' : item['price'])
-                                    : item['price'].toString().startsWith('Rp') ? item['price'] : 'Rp ${item['price']}',
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primary),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_isBid) ...[
-                            Container(width: 1, height: 40, color: AppColors.border),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Sisa Waktu', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _timeLeft.inSeconds > 0 ? _formatDuration(_timeLeft) : 'Berakhir',
-                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFFF59E0B)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(16)),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(radius: 20, backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11')),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(item['storeName'] ?? 'Toko Penjual', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                                  const Row(
-                                    children: [
-                                      Icon(Icons.star, color: Color(0xFFF59E0B), size: 12),
-                                      SizedBox(width: 4),
-                                      Text('4.9 (124 ulasan)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      if (_isBid && _bids.isNotEmpty) ...[
-                        const SizedBox(height: 24),
-                        const Text('Riwayat Tawaran', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-                        const SizedBox(height: 12),
-                        ..._bids.take(3).map((bid) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(bid['buyer_name'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                              Text('Rp ${bid['amount']}', style: const TextStyle(color: AppColors.primary)),
-                            ],
-                          ),
-                        )),
-                      ],
-                    ],
+                    children: [_buildHeroImage(), _buildProductInfo(item)],
                   ),
                 ),
+                _buildFloatingHeader(),
               ],
             ),
           ),
+          _buildBottomActionBar(item),
+        ],
+      ),
+    );
+  }
 
-          // Custom AppBar
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: SafeArea(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-                      onPressed: () => Navigator.pop(context),
-                      style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.9)),
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: _isFavorite ? AppColors.error : AppColors.primary),
-                          onPressed: () async {
-                            final newFav = !_isFavorite;
-                            final productId = widget.product['id'];
-                            setState(() => _isFavorite = newFav);
-                            if (productId != null) {
-                              await ProductService().toggleFavorite(productId, newFav);
-                            }
-                          },
-                          style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.9)),
-                        ),
-                      ],
-                    ),
-                  ],
+  Widget _buildBottomActionBar(Map<String, dynamic> item) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              offset: const Offset(0, -4),
+              blurRadius: 16,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 52,
+              height: 48,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                  onPressed: () {},
                 ),
               ),
             ),
-          ),
-
-          // Bottom Action Bar
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: Container(
-              padding: EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 16 + MediaQuery.of(context).padding.bottom),
-              decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), offset: const Offset(0, -4), blurRadius: 16)]),
-              child: Row(
-                children: [
-                  Container(
-                    height: 52, width: 52,
-                    decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(16)),
-                    child: IconButton(icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary), onPressed: () {}),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: (_isBid && _timeLeft.inSeconds > 0) ? _showBidDialog : () {
-                          int finalPrice = _highestBid > 0 ? _highestBid : int.parse(item['price'].toString().replaceAll(RegExp(r'[^0-9]'), ''));
+            const SizedBox(width: 12),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: (_isBid && _timeLeft.inSeconds > 0)
+                      ? _showBidDialog
+                      : () {
+                          final finalPrice = _highestBid > 0
+                              ? _highestBid
+                              : _parsePrice(item['price']);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => CheckoutScreen(product: item, finalPrice: finalPrice)),
+                            MaterialPageRoute(
+                              builder: (_) => CheckoutScreen(
+                                product: item,
+                                finalPrice: finalPrice,
+                              ),
+                            ),
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: Text(
-                          _isBid 
-                            ? (_timeLeft.inSeconds > 0 ? 'Bid Sekarang' : 'Lelang Berakhir')
-                            : 'Beli Sekarang',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                        ),
-                      ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                ],
+                  child: Text(
+                    _isBid
+                        ? (_timeLeft.inSeconds > 0
+                              ? 'Bid Sekarang'
+                              : 'Lelang Berakhir')
+                        : 'Beli Sekarang',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroImage() {
+    final isNetwork = _imageUrl.startsWith('http');
+    final height = MediaQuery.sizeOf(context).height * 0.44;
+
+    return SizedBox(
+      height: height.clamp(360.0, 430.0),
+      width: double.infinity,
+      child: isNetwork
+          ? Image.network(
+              _imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (_, _, _) => _buildImagePlaceholder(),
+            )
+          : Image.file(
+              File(_imageUrl),
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (_, _, _) => _buildImagePlaceholder(),
+            ),
+    );
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Container(
+      color: const Color(0xFFE8EEF4),
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.image_outlined,
+        color: AppColors.grey400,
+        size: 64,
+      ),
+    );
+  }
+
+  Widget _buildFloatingHeader() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildCircleButton(
+                icon: Icons.arrow_back_rounded,
+                onPressed: () => Navigator.pop(context),
+              ),
+              _buildCircleButton(
+                icon: _isFavorite ? Icons.favorite : Icons.favorite_border,
+                iconColor: _isFavorite ? AppColors.error : AppColors.primary,
+                onPressed: () async {
+                  final newFav = !_isFavorite;
+                  final productId = widget.product['id'];
+                  setState(() => _isFavorite = newFav);
+                  if (productId != null) {
+                    await ProductService().toggleFavorite(productId, newFav);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCircleButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    Color iconColor = AppColors.primary,
+  }) {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: IconButton(
+        icon: Icon(icon, color: iconColor, size: 26),
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.white.withValues(alpha: 0.92),
+          shape: const CircleBorder(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductInfo(Map<String, dynamic> item) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.scaffoldBackground,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _buildTag(_category),
+              _buildTag(_condition),
+              _buildTag(_badge, isHighlighted: true),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            _title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimary,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _buildPriceSection(item),
+          const SizedBox(height: 16),
+          _buildFullWidthSellerCard(),
+          const SizedBox(height: 24),
+          const Text(
+            'Deskripsi Produk',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _productText('description', 'Tidak ada deskripsi untuk produk ini.'),
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+          ),
+          if (_isBid && _bids.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            const Text(
+              'Riwayat Tawaran',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ..._bids
+                .take(3)
+                .map(
+                  (bid) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          bid['buyer_name']?.toString() ?? 'Pembeli',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          _formatPrice(bid['amount']),
+                          style: const TextStyle(color: AppColors.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceSection(Map<String, dynamic> item) {
+    final price = _isBid
+        ? (_highestBid > 0 ? _highestBid : _parsePrice(item['price']))
+        : _parsePrice(item['price']);
+    final timeText = _timeLeft.inSeconds > 0
+        ? _formatDuration(_timeLeft)
+        : _isBid
+        ? '167:43:11'
+        : '';
+
+    if (!_isBid) {
+      return _buildMetric(label: 'Harga', value: _formatPrice(price));
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildMetric(
+            label: 'Bid Saat Ini',
+            value: _formatPrice(price),
+          ),
+        ),
+        Container(width: 1, height: 66, color: AppColors.border),
+        const SizedBox(width: 28),
+        Expanded(
+          child: _buildMetric(
+            label: 'Sisa Waktu',
+            value: timeText,
+            valueColor: const Color(0xFFF59E0B),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetric({
+    required String label,
+    required String value,
+    Color valueColor = AppColors.primary,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSellerCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 20,
+            backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _storeName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Row(
+                  children: [
+                    Icon(Icons.star, color: Color(0xFFF59E0B), size: 13),
+                    SizedBox(width: 4),
+                    Text(
+                      '4.9 (124 ulasan)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -382,19 +605,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  Widget _buildFullWidthSellerCard() {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    return Transform.translate(
+      offset: const Offset(-32, 0),
+      child: SizedBox(width: screenWidth, child: _buildSellerCard()),
+    );
+  }
+
   Widget _buildTag(String text, {bool isHighlighted = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isHighlighted ? const Color(0xFFFFF3E0) : const Color(0xFFF3F4F6),
+        color: isHighlighted
+            ? const Color(0xFFFFF3E0)
+            : const Color(0xFFF3F4F6),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         text,
         style: TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: isHighlighted ? const Color(0xFFE65100) : AppColors.textSecondary,
+          fontWeight: FontWeight.w700,
+          color: isHighlighted
+              ? const Color(0xFFE65100)
+              : AppColors.textSecondary,
         ),
       ),
     );

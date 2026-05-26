@@ -19,11 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   
-  // App Toggles state
-  bool _pushNotifications = true;
-  bool _biometrics = false;
-  bool _darkMode = false;
-  
+
   bool _isLoading = true;
   String _userEmail = '';
   int? _userId;
@@ -209,12 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildProfileCard(),
                   const SizedBox(height: 24),
 
-                  // App Settings Section
-                  _buildSectionHeader('Preferensi Aplikasi'),
-                  _buildAppSettingsCard(),
-                  const SizedBox(height: 24),
-
-                  // Security Section
+// Security Section
                   _buildSectionHeader('Keamanan Akun'),
                   _buildSecurityCard(),
                   const SizedBox(height: 24),
@@ -359,44 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildAppSettingsCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          SwitchListTile(
-            title: const Text('Notifikasi Push', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-            subtitle: const Text('Terima pembaruan penawaran lelang & status pesanan', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-            value: _pushNotifications,
-            activeThumbColor: AppColors.primary,
-            onChanged: (v) => setState(() => _pushNotifications = v),
-          ),
-          Divider(color: AppColors.divider, height: 1),
-          SwitchListTile(
-            title: const Text('Keamanan Biometrik', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-            subtitle: const Text('Gunakan sidik jari atau Face ID untuk masuk cepat', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-            value: _biometrics,
-            activeThumbColor: AppColors.primary,
-            onChanged: (v) => setState(() => _biometrics = v),
-          ),
-          Divider(color: AppColors.divider, height: 1),
-          SwitchListTile(
-            title: const Text('Tema Gelap', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-            subtitle: const Text('Aktifkan visual tema gelap untuk menghemat mata Anda', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-            value: _darkMode,
-            activeThumbColor: AppColors.primary,
-            onChanged: (v) => setState(() => _darkMode = v),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecurityCard() {
+Widget _buildSecurityCard() {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.background,

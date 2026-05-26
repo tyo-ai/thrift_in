@@ -262,6 +262,7 @@ class _SellScreenState extends State<SellScreen> {
                     imageUrl: _imagePath ?? '', // Save local path
                     badge: badge,
                     isBid: _selectedMethod == 1,
+                    description: _descController.text.trim(),
                   );
 
                   if (newId > 0) {

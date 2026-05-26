@@ -20,13 +20,13 @@ class DbHelper {
 
     return await openDatabase(
       pathString,
-      version: 6,
+      version: 9,
       onCreate: (db, version) async {
         await _createTables(db);
         await _seedData(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 6) {
+        if (oldVersion < 9) {
           await db.execute('DROP TABLE IF EXISTS users');
           await db.execute('DROP TABLE IF EXISTS products');
           await db.execute('DROP TABLE IF EXISTS live_bids');
@@ -52,6 +52,8 @@ class DbHelper {
         role TEXT DEFAULT 'buyer',
         phone TEXT,
         address TEXT,
+        bio TEXT,
+        photo_path TEXT,
         created_at TEXT NOT NULL
       )
     ''');
@@ -72,7 +74,8 @@ class DbHelper {
         isFavorite INTEGER DEFAULT 0,
         badge TEXT,
         isBid INTEGER DEFAULT 0,
-        end_time TEXT
+        end_time TEXT,
+        description TEXT
       )
     ''');
 
@@ -416,7 +419,27 @@ class DbHelper {
       }
     ];
 
-    for (var p in products) {
+    final List<String> descriptions = [
+      'Cardigan rajut vintage klasik yang sangat nyaman digunakan. Kondisi rajutan sangat rapi, tidak ada serat benang terlepas. Sempurna untuk penampilan retro kasual.',
+      'Satu set gelang perak minimalis yang memikat. Kilauan perak asli dengan detail ukiran halus yang menambah kesan elegan dan mewah pada penampilan Anda sehari-hari.',
+      'Jaket denim trucker original Levi\'s tipe 750S. Warna indigo vintage khas 90-an dengan pudar alami (natural fading) yang gagah dan material denim yang tebal.',
+      'Jaket varsity retro edisi Universitas Harvard. Kombinasi wool premium dan detail bordir tebal berkualitas tinggi. Sangat hangat untuk dipakai saat berkendara.',
+      'Jaket bomber vintage warna zaitun khas militer 90-an. Desain windproof yang kokoh dengan resleting YKK asli dan busa bagian dalam yang masih empuk.',
+      'Jaket denim trucker legendaris edisi terbatas tahun 1970. Warna pudar alami yang bernilai seni tinggi. Sangat langka dan dicari oleh kolektor denim.',
+      'Jaket kulit asli model Biker buatan lokal berkualitas ekspor. Kulit domba pilihan yang lentur, tebal, dan memberikan kenyamanan maksimal saat berkendara.',
+      'Jaket windbreaker bergaya retro warna neon yang mencolok. Sangat ringan, tahan air intensitas rendah, cocok untuk aktivitas luar ruangan maupun olahraga pagi.',
+      'Trench coat klasik ala London warna krem. Bahan katun kanvas tahan angin dengan potongan sabuk pinggang yang elegan untuk penampilan formal modern.',
+      'Sepatu Converse Chuck Taylor 70 edisi vintage. Sol tebal yang empuk dengan kanvas organik berkualitas tinggi. Kondisi sangat terawat dan mulus.',
+      'Tas jinjing berbahan kulit sapi asli warna cokelat klasik. Kompartemen utama yang luas dengan jahitan tangan yang sangat kokoh untuk daya tahan seumur hidup.',
+      'Pemutar kaset pita portabel Sony Walkman seri klasik. Mekanik berfungsi normal dengan kualitas suara analog yang hangat. Sangat dicari penggemar audio vintage.',
+      'Sepatu kulit tipe Oxford model Dr. Martens 1461. Kulit hitam mengkilap (smooth leather) yang tebal dan sol karet ikonik yang sangat awet.',
+      'Tas bahu antik dari rumah mode Gucci. Motif monogram kanvas klasik dengan detail pinggiran kulit asli. Keanggunan vintage yang tak lekang oleh waktu.',
+      'Kamera digital saku Fujifilm dengan desain retro klasik. Menghasilkan foto dengan tone warna analog CCD yang hangat khas awal tahun 2000-an.'
+    ];
+
+    for (int i = 0; i < products.length; i++) {
+      final p = Map<String, dynamic>.from(products[i]);
+      p['description'] = i < descriptions.length ? descriptions[i] : 'Kondisi barang thrift pilihan dengan kualitas terbaik.';
       await db.insert('products', p);
     }
 

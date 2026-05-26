@@ -35,6 +35,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.dispose();
   }
 
+  String _formatPrice(int value, {bool isDiscount = false}) {
+    final formatted = value.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (match) => '${match[1]}.',
+    );
+    return '${isDiscount ? '- ' : ''}Rp $formatted';
+  }
+
   void _placeOrder() async {
     final address = _addressController.text.trim();
     if (address.isEmpty) {
@@ -156,7 +164,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary, height: 1.3),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 6),
-                        Text('Rp ${widget.finalPrice}',
+                        Text(_formatPrice(widget.finalPrice),
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary)),
                       ],
                     ),
@@ -228,13 +236,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               title: 'Rincian Pembayaran',
               child: Column(
                 children: [
-                  _buildBillRow('Harga Barang', 'Rp ${widget.finalPrice}'),
+                  _buildBillRow('Harga Barang', _formatPrice(widget.finalPrice)),
                   const SizedBox(height: 8),
-                  _buildBillRow('Ongkos Kirim', 'Rp $shippingCost'),
+                  _buildBillRow('Ongkos Kirim', _formatPrice(shippingCost)),
                   const SizedBox(height: 8),
-                  _buildBillRow('Biaya Layanan', 'Rp 2.000'),
+                  _buildBillRow('Biaya Layanan', _formatPrice(2000)),
                   const SizedBox(height: 8),
-                  _buildBillRow('Promo Hemat', '- Rp 5.000', isPromo: true),
+                  _buildBillRow('Promo Hemat', _formatPrice(5000, isDiscount: true), isPromo: true),
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 10),
                     child: Divider(color: AppColors.divider),
@@ -245,7 +253,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const Text('Total Tagihan',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                       Text(
-                        'Rp $totalAmount',
+                        _formatPrice(totalAmount),
                         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary)),
                     ],
                   ),

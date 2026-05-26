@@ -69,6 +69,7 @@ class ProductService {
     String? badge,
     bool isBid = false,
     String? endTime,
+    String? description,
   }) async {
     final db = await _dbHelper.database;
     return await db.insert('products', {
@@ -86,6 +87,7 @@ class ProductService {
       'badge': badge,
       'isBid': isBid ? 1 : 0,
       'end_time': endTime,
+      'description': description ?? 'Tidak ada deskripsi produk.',
     });
   }
 

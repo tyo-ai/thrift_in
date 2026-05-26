@@ -812,9 +812,9 @@ class _SearchScreenState extends State<SearchScreen> {
       itemCount: _results.length + 1,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 11,
-        mainAxisSpacing: 11,
-        childAspectRatio: 0.53,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.05,
       ),
       itemBuilder: (context, index) {
         if (index == _results.length) {
@@ -967,13 +967,13 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(9, 8, 9, 9),
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
@@ -982,42 +982,42 @@ class _SearchScreenState extends State<SearchScreen> {
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.verified_rounded,
+                        color: AppColors.primary,
+                        size: 11,
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          '${_text(item['storeName'] ?? item['store'], 'Toko')} · $location',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     _formatPrice(item['price']),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 13,
                       height: 1,
                       fontWeight: FontWeight.w900,
                       color: isBid
                           ? const Color(0xFFB96C00)
-                          : AppColors.primary,
+                          : AppColors.textPrimary,
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          location,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -1055,7 +1055,7 @@ class _SearchScreenState extends State<SearchScreen> {
       return Image.network(
         imageUrl,
         width: double.infinity,
-        height: 138,
+        height: 88,
         fit: BoxFit.cover,
         errorBuilder: (_, _, _) {
           return _buildImagePlaceholder();
@@ -1066,7 +1066,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return Image.asset(
       imageUrl,
       width: double.infinity,
-      height: 138,
+      height: 88,
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) {
         return _buildImagePlaceholder();
@@ -1077,12 +1077,12 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildImagePlaceholder() {
     return Container(
       width: double.infinity,
-      height: 138,
+      height: 88,
       color: const Color(0xFFEFF3F6),
       child: Icon(
         Icons.image_outlined,
         color: AppColors.textSecondary,
-        size: 34,
+        size: 30,
       ),
     );
   }

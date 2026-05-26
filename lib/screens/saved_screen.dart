@@ -46,6 +46,34 @@ class _SavedScreenState extends State<SavedScreen>
     await _loadFavorites();
   }
 
+  String _text(dynamic value, [String fallback = '-']) {
+    if (value == null) return fallback;
+    final result = value.toString().trim();
+    return result.isEmpty ? fallback : result;
+  }
+
+  String _formatPrice(dynamic value) {
+    if (value == null) return 'Rp 0';
+
+    final text = value.toString();
+
+    if (text.toLowerCase().startsWith('rp')) {
+      return text;
+    }
+
+    final onlyNumber = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (onlyNumber.isEmpty) {
+      return 'Rp 0';
+    }
+
+    final formatted = onlyNumber.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => '.',
+    );
+
+    return 'Rp $formatted';
+  }
   @override
   void dispose() {
     _tabController.dispose();
@@ -178,9 +206,9 @@ class _SavedScreenState extends State<SavedScreen>
         physics: const AlwaysScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.65,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 1.05,
         ),
         itemCount: items.length,
         itemBuilder: (context, index) {
@@ -194,16 +222,18 @@ class _SavedScreenState extends State<SavedScreen>
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: AppColors.cardSurface,
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: const Color(0xFFE6EDF3)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: Colors.black.withValues(alpha: 0.035),
                     blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -212,17 +242,18 @@ class _SavedScreenState extends State<SavedScreen>
                     children: [
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16)),
-                        child: AspectRatio(
-                          aspectRatio: 1,
+                            top: Radius.circular(13)),
+                        child: SizedBox(
+                          height: 88,
+                          width: double.infinity,
                           child: Image.network(
                             item['imageUrl'] ?? '',
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
                                 Container(
-                              color: AppColors.grey100,
+                              color: const Color(0xFFF4F7FB),
                               child: const Icon(Icons.image_outlined,
-                                  color: AppColors.grey300, size: 40),
+                                  color: Color(0xFFB0BEC5), size: 32),
                             ),
                           ),
                         ),
@@ -230,22 +261,22 @@ class _SavedScreenState extends State<SavedScreen>
                       // Badge
                       if (isLelang || (item['badge'] != null && (item['badge'] as String).isNotEmpty))
                         Positioned(
-                          top: 8,
-                          left: 8,
+                          top: 6,
+                          left: 6,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: isLelang
                                   ? const Color(0xFFF59E0B)
                                   : AppColors.primary,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               isLelang ? 'Lelang' : (item['badge'] ?? ''),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 9,
+                                fontSize: 8,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -253,8 +284,8 @@ class _SavedScreenState extends State<SavedScreen>
                         ),
                       // Tombol hapus favorit
                       Positioned(
-                        top: 6,
-                        right: 6,
+                        top: 5,
+                        right: 5,
                         child: GestureDetector(
                           onTap: () {
                             final id = item['id'];
@@ -269,75 +300,61 @@ class _SavedScreenState extends State<SavedScreen>
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.favorite,
-                                size: 16, color: AppColors.error),
+                                size: 14, color: AppColors.error),
                           ),
                         ),
                       ),
                     ],
                   ),
                   // Detail produk
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['name'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['name'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
                           ),
-                          if (item['storeName'] != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              item['storeName'] as String,
-                              style: const TextStyle(
-                                  fontSize: 10, color: AppColors.textHint),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.verified_rounded,
+                              color: AppColors.primary,
+                              size: 11,
+                            ),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                '${_text(item['storeName'] ?? item['store'], 'Toko')} · ${_text(item['location'], 'Surakarta')}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ],
-                          const SizedBox(height: 4),
-                          Text(
-                            item['price'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          _formatPrice(item['price']),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimary,
                           ),
-                          const Spacer(),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 28,
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        ProductDetailScreen(product: item)),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                                side: const BorderSide(
-                                    color: AppColors.primary),
-                                padding: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
-                                textStyle: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                              child: const Text('Lihat Detail'),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../services/user_service.dart';
@@ -109,9 +110,12 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
                     ),
                     child: CircleAvatar(
                       backgroundColor: const Color(0xFFE8EEF4),
-                      backgroundImage: NetworkImage(
-                        'https://ui-avatars.com/api/?name=${_userName.replaceAll(' ', '+')}&background=E7F4F1&color=007F63&bold=true',
-                      ),
+                      backgroundImage: UserService.currentUser?['photo_path'] != null &&
+                              UserService.currentUser!['photo_path'].toString().isNotEmpty
+                          ? FileImage(File(UserService.currentUser!['photo_path'])) as ImageProvider
+                          : NetworkImage(
+                              'https://ui-avatars.com/api/?name=${_userName.replaceAll(' ', '+')}&background=E7F4F1&color=007F63&bold=true',
+                            ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -124,16 +128,6 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
                       fontWeight: FontWeight.w800,
                       color: AppColors.textPrimary,
                       letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  const Text(
-                    'Verified Thrifter',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
                     ),
                   ),
                 ],

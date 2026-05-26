@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../services/user_service.dart';
 import 'register_screen.dart';
-import 'main_screen.dart';
+import 'complete_profile_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: 'nama@contoh.com',
+                  hintText: 'masukan email Anda',
                   hintStyle: TextStyle(
                     color: AppColors.textHint,
                     fontSize: 14,
@@ -140,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   GestureDetector(
                     onTap: () {},
                     child: Text(
-                      'Lupa?',
+                      'Lupa kata sandi?',
                       style: TextStyle(
                         fontSize: 13,
                         color: AppColors.primary,
@@ -157,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  hintText: '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
+                  hintText: 'masukan kata sandi Anda',
                   hintStyle: TextStyle(
                     color: AppColors.textHint,
                     fontSize: 14,
@@ -212,7 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     if (email.isEmpty || password.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Email dan kata sandi harus diisi')),
+                        const SnackBar(content: Text('Email dan kata sandi harus di isi')),
                       );
                       return;
                     }
@@ -224,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (user != null) {
                       navigator.pushReplacement(
                         MaterialPageRoute(
-                          builder: (_) => const MainScreen(),
+                          builder: (_) => const CompleteProfileScreen(),
                         ),
                       );
                     } else {
@@ -308,10 +308,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {},
-                      icon: Icon(
-                        Icons.g_mobiledata,
-                        size: 24,
-                        color: AppColors.textPrimary,
+                      icon: Image.asset(
+                        'assets/icons/google_logo.png',
+                        width: 18,
+                        height: 18,
                       ),
                       label: const Text('Google'),
                       style: OutlinedButton.styleFrom(

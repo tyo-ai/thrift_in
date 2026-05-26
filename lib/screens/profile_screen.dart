@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/sidebar_drawer.dart';
@@ -5,7 +6,9 @@ import 'notifications_screen.dart';
 import 'product_detail_screen.dart';
 import '../services/user_service.dart';
 import '../services/product_service.dart';
-import 'login_screen.dart';
+import 'complete_profile_screen.dart';
+import 'settings_screen.dart';
+import 'saved_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,6 +22,16 @@ class _ProfileScreenState extends State<ProfileScreen>
   late TabController _tabController;
 
   String get _userName => UserService.currentUser?['name'] ?? 'Andhika';
+  String get _userBio {
+    final bio = UserService.currentUser?['bio']?.toString().trim();
+    return (bio == null || bio.isEmpty)
+        ? 'Lengkapi profilmu agar tampil lebih menarik di ThriftIn'
+        : bio;
+  }
+  bool get _hasBio {
+    final bio = UserService.currentUser?['bio']?.toString().trim();
+    return bio != null && bio.isNotEmpty;
+  }
 
   List<Map<String, dynamic>> _myItems = [];
   bool _isLoading = true;
@@ -111,34 +124,30 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  void _logout() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () {
-              UserService().logout();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-            child: const Text(
-              'Keluar',
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
+
+
+  Future<void> _toggleFavorite(Map<String, dynamic> item) async {
+    final productId = item['id'];
+    final isLiked = item['isFavorite'] == 1 || item['isFavorite'] == true || item['liked'] == 1 || item['liked'] == true;
+    final newValue = !isLiked;
+
+    setState(() {
+      final idx = _myItems.indexWhere((p) => (productId != null && p['id'] == productId) || (p['name'] == item['name']));
+      if (idx != -1) {
+        _myItems[idx] = Map<String, dynamic>.from(_myItems[idx])
+          ..['isFavorite'] = newValue ? 1 : 0
+          ..['liked'] = newValue;
+      }
+    });
+
+    if (productId != null) {
+      final parsedId = productId is int
+          ? productId
+          : int.tryParse(productId.toString());
+      if (parsedId != null) {
+        await ProductService().toggleFavorite(parsedId, newValue);
+      }
+    }
   }
 
   @override
@@ -225,7 +234,14 @@ class _ProfileScreenState extends State<ProfileScreen>
               color: AppColors.primary,
               size: 21,
             ),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SavedScreen(),
+                ),
+              ).then((_) => _loadData());
+            },
           ),
           IconButton(
             icon: Icon(
@@ -248,7 +264,14 @@ class _ProfileScreenState extends State<ProfileScreen>
               color: AppColors.primary,
               size: 21,
             ),
-            onPressed: _logout,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SettingsScreen(),
+                ),
+              ).then((_) => _loadData());
+            },
           ),
           const SizedBox(width: 4),
         ],
@@ -312,9 +335,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 child: CircleAvatar(
                   backgroundColor: const Color(0xFFE8EEF4),
-                  backgroundImage: NetworkImage(
-                    'https://ui-avatars.com/api/?name=${_userName.replaceAll(' ', '+')}&background=E7F4F1&color=007F63&bold=true',
-                  ),
+                  backgroundImage: UserService.currentUser?['photo_path'] != null &&
+                          UserService.currentUser!['photo_path'].toString().isNotEmpty
+                      ? FileImage(File(UserService.currentUser!['photo_path'])) as ImageProvider
+                      : NetworkImage(
+                          'https://ui-avatars.com/api/?name=${_userName.replaceAll(' ', '+')}&background=E7F4F1&color=007F63&bold=true',
+                        ),
                 ),
               ),
               Positioned(
@@ -355,23 +381,35 @@ class _ProfileScreenState extends State<ProfileScreen>
               color: const Color(0xFFDDF4EB),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: Text(
-              'Verified Thrifter',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.verified_rounded,
+                  color: AppColors.primary,
+                  size: 12,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Toko $_userName',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 10),
           Text(
-            'CEO Alibaba alibaba aduh aduh',
+            _userBio,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
+              fontWeight: _hasBio ? FontWeight.w500 : FontWeight.w400,
+              color: _hasBio ? AppColors.textPrimary : AppColors.textSecondary,
+              fontStyle: _hasBio ? FontStyle.normal : FontStyle.italic,
             ),
           ),
           const SizedBox(height: 18),
@@ -388,18 +426,21 @@ class _ProfileScreenState extends State<ProfileScreen>
             height: 42,
             child: ElevatedButton.icon(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Fitur edit profil belum dibuat.'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CompleteProfileScreen(),
                   ),
-                );
+                ).then((_) {
+                  setState(() {});
+                });
               },
               icon: const Icon(
-                Icons.edit_outlined,
+                Icons.person_outline_rounded,
                 size: 16,
               ),
               label: const Text(
-                'Edit Profil',
+                'Lengkapi Profil',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
@@ -487,9 +528,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       itemCount: items.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 13,
-        mainAxisSpacing: 13,
-        childAspectRatio: 0.57,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.05,
       ),
       itemBuilder: (context, index) {
         final item = items[index];
@@ -539,19 +580,22 @@ class _ProfileScreenState extends State<ProfileScreen>
               Positioned(
                 top: 8,
                 right: 8,
-                child: Container(
-                  width: 27,
-                  height: 27,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.88),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isLiked
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    color: isLiked ? Colors.red : AppColors.textSecondary,
-                    size: 17,
+                child: GestureDetector(
+                  onTap: () => _toggleFavorite(item),
+                  child: Container(
+                    width: 27,
+                    height: 27,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.88),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isLiked
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: isLiked ? Colors.red : AppColors.textSecondary,
+                      size: 17,
+                    ),
                   ),
                 ),
               ),
@@ -593,13 +637,13 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(9, 8, 9, 9),
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
@@ -608,7 +652,52 @@ class _ProfileScreenState extends State<ProfileScreen>
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.verified_rounded,
+                        color: AppColors.primary,
+                        size: 11,
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          _text(item['storeName'] ?? item['store'], 'Toko Saya'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isBid
+                              ? const Color(0xFFFFF2CF)
+                              : const Color(0xFFE7F6EF),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          badge,
+                          style: TextStyle(
+                            fontSize: 7,
+                            fontWeight: FontWeight.w800,
+                            color: isBid
+                                ? const Color(0xFFB96C00)
+                                : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     _formatPrice(item['price']),
                     maxLines: 1,
@@ -616,34 +705,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
-                      color: isBid
-                          ? const Color(0xFFB96C00)
-                          : AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isBid
-                          ? const Color(0xFFFFF2CF)
-                          : const Color(0xFFE7F6EF),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      badge,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 7.5,
-                        fontWeight: FontWeight.w800,
-                        color: isBid
-                            ? const Color(0xFFB96C00)
-                            : AppColors.primary,
-                      ),
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ],
@@ -663,7 +725,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (imageUrl.startsWith('http')) {
       return Image.network(
         imageUrl,
-        height: 142,
+        height: 88,
         width: double.infinity,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
@@ -674,7 +736,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     return Image.asset(
       imageUrl,
-      height: 142,
+      height: 88,
       width: double.infinity,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
@@ -685,13 +747,13 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildImagePlaceholder() {
     return Container(
-      height: 142,
+      height: 88,
       width: double.infinity,
       color: const Color(0xFFEFF3F6),
       child: Icon(
         Icons.image_outlined,
         color: AppColors.textSecondary,
-        size: 34,
+        size: 30,
       ),
     );
   }

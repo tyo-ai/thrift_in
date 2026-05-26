@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import '../services/user_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -15,18 +16,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  String _selectedRole = 'buyer';
+  final String _selectedRole = 'buyer';
 
   // Colors
-  static const Color surfaceContainerLow = Color(0xFFF0F3FF);
-  static const Color primaryContainer = Color(0xFF10B981);
-  static const Color onPrimaryContainer = Color(0xFF00422B);
-  static const Color primary = Color(0xFF006C49);
-  static const Color onSurface = Color(0xFF151C27);
-  static const Color onSurfaceVariant = Color(0xFF3C4A42);
-  static const Color outline = Color(0xFF6C7A71);
-  static const Color outlineVariant = Color(0xFFBBCABF);
-  static const Color surfaceContainerLowest = Color(0xFFFFFFFF);
+  static const Color surfaceContainerLow = AppColors.scaffoldBackground;
+  static const Color primaryContainer = AppColors.primary;
+  static const Color onPrimaryContainer = AppColors.textOnPrimary;
+  static const Color primary = AppColors.primary;
+  static const Color onSurface = AppColors.textPrimary;
+  static const Color onSurfaceVariant = AppColors.grey700;
+  static const Color outline = AppColors.textSecondary;
+  static const Color outlineVariant = AppColors.inputBorder;
+  static const Color surfaceContainerLowest = AppColors.surface;
 
   @override
   void dispose() {
@@ -246,17 +247,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!isDesktop)
-          const Center(
-            child: Text(
-              'ThriftIn',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: primary,
-              ),
+          SizedBox(
+            height: 44,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back, size: 22),
+                    color: onSurface,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 44,
+                      height: 44,
+                    ),
+                  ),
+                ),
+                const Text(
+                  'ThriftIn',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: primary,
+                  ),
+                ),
+              ],
             ),
           ),
         if (!isDesktop) const SizedBox(height: 10),
+
+        if (isDesktop)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back, size: 18),
+              label: const Text('Kembali'),
+              style: TextButton.styleFrom(
+                foregroundColor: primary,
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        if (isDesktop) const SizedBox(height: 12),
 
         Text(
           'Daftar Akun Baru',
@@ -276,12 +311,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Role Selection
-        _buildLabel('Daftar Sebagai', 'role'),
-        const SizedBox(height: 8),
-        _buildRoleSelection(),
-        const SizedBox(height: 16),
 
         // Nama Lengkap
         _buildLabel('Nama Lengkap', 'name'),
@@ -473,12 +502,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {},
-                icon: Image.network(
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuDsIbbnBpsK1i8ZCyQqosKal9hWrXyhJ1BGOAEMoUrInO9wKbSEx6IhVoam2_QrlGFP9rStY2h5K96hTuT5RNhmDyAaFe4lvPpoGKvidlTSrCrqatFAxwxurtb4iHFqL-_MeJTXQ_N6eXK4X0p7sTCxvtO_7grrjVVfXoj0OKlKyAH2XP5PTOgc-chFU_W8LWOt8quxt1FY_252dU1wZowcZE9QpUj8Y7qotBB_d41tB3QEZ7yM3Vnb2miMLCNGSUwWqH3gdaTeCOjm',
-                  width: 20,
-                  height: 20,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.g_mobiledata, size: 24, color: onSurface),
+                icon: Image.asset(
+                  'assets/icons/google_logo.png',
+                  width: 18,
+                  height: 18,
                 ),
                 label: const Text('Google'),
                 style: OutlinedButton.styleFrom(
@@ -500,7 +527,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {},
-                icon: const Icon(Icons.phone_iphone, size: 20, color: onSurface),
+                icon: const Icon(Icons.apple, size: 20, color: onSurface),
                 label: const Text('Apple'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: onSurface,
@@ -618,63 +645,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildRoleSelection() {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _selectedRole = 'buyer'),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: _selectedRole == 'buyer' ? primaryContainer : surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _selectedRole == 'buyer' ? primaryContainer : outlineVariant,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  'Pembeli',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: _selectedRole == 'buyer' ? onPrimaryContainer : outline,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _selectedRole = 'seller'),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: _selectedRole == 'seller' ? primaryContainer : surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _selectedRole == 'seller' ? primaryContainer : outlineVariant,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  'Penjual',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: _selectedRole == 'seller' ? onPrimaryContainer : outline,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
