@@ -184,6 +184,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     commentController.dispose();
   }
 
+  Future<void> _completeOrderAndReview(Map<String, dynamic> order) async {
+    final orderId = int.tryParse(order['id']?.toString() ?? '');
+    if (orderId == null) return;
+
+    try {
+      await _orderService.updateOrderStatus(orderId, 'Selesai');
+      if (!mounted) return;
+      final completedOrder = Map<String, dynamic>.from(order)
+        ..['status'] = 'Selesai';
+      await _showReviewDialog(completedOrder);
+      _loadOrders(forceRefresh: true);
+    } catch (e) {
+      _showCustomSnackbar('Gagal menyelesaikan pesanan: $e', AppColors.error);
+    }
+  }
+
   List<Map<String, dynamic>> _getFilteredOrders(String status) {
     if (status == 'Semua') return _orders;
     return _orders.where((o) => o['status'] == status).toList();
@@ -564,7 +580,31 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                         ),
                       ),
                     ),
-                    if (status == 'Selesai') ...[
+                    if (status == 'Dikirim') ...[
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () => _completeOrderAndReview(order),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Pesanan Diterima',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ] else if (status == 'Selesai') ...[
                       const SizedBox(width: 8),
                       OutlinedButton(
                         onPressed: () => _showReviewDialog(order),
@@ -580,11 +620,21 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                           ),
                         ),
                         child: Text(
-                          'Ulasan',
+                          'Beri Rating',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Rating setelah selesai',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textHint,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
