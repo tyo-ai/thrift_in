@@ -66,7 +66,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Metode pembayaran utama berhasil diperbarui!'),
+          content: Text('Rekening utama berhasil diperbarui!'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -75,7 +75,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal memperbarui metode utama: $e'),
+          content: Text('Gagal memperbarui rekening utama: $e'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -95,7 +95,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Metode pembayaran telah dihapus'),
+          content: Text('Rekening penjual telah dihapus'),
           backgroundColor: AppColors.primary,
         ),
       );
@@ -149,7 +149,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Metode pembayaran baru berhasil ditambahkan!'),
+          content: Text('Rekening penjual berhasil ditambahkan!'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -178,7 +178,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Metode Pembayaran',
+          'Rekening Penjual',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -218,7 +218,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             Icon(Icons.payment_outlined, size: 64, color: AppColors.grey300),
             const SizedBox(height: 16),
             Text(
-              'Belum ada metode pembayaran',
+              'Belum ada rekening penjual',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -227,7 +227,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Tambahkan e-wallet, virtual account, atau kartu debit/kredit Anda untuk mempermudah transaksi.',
+              'Tambahkan rekening bank atau e-wallet untuk pencairan dana penjualan.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
@@ -383,7 +383,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             onPressed: _showAddPaymentBottomSheet,
             icon: const Icon(Icons.add, color: Colors.white),
             label: const Text(
-              'Tambah Metode Pembayaran',
+              'Tambah Rekening Penjual',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -450,7 +450,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     color: AppColors.primary,
                   ),
                   title: const Text(
-                    'Atur sebagai Metode Utama',
+                    'Atur sebagai Rekening Utama',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   onTap: () {
@@ -464,7 +464,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                   color: AppColors.error,
                 ),
                 title: const Text(
-                  'Hapus Metode Pembayaran',
+                  'Hapus Rekening Penjual',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.error,
@@ -487,9 +487,9 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Metode'),
+        title: const Text('Hapus Rekening'),
         content: const Text(
-          'Apakah Anda yakin ingin menghapus metode pembayaran ini?',
+          'Apakah Anda yakin ingin menghapus rekening penjual ini?',
         ),
         actions: [
           TextButton(
@@ -515,7 +515,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final numberController = TextEditingController();
-    String selectedType = 'E-Wallet';
+    String selectedType = 'Bank';
     bool makeDefault = false;
 
     showModalBottomSheet(
@@ -555,7 +555,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Tambah Metode Pembayaran',
+                      'Tambah Rekening Penjual',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -575,50 +575,42 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     ),
                     const SizedBox(height: 8),
                     Row(
-                      children: ['E-Wallet', 'Virtual Account', 'Kartu Kredit']
-                          .map((type) {
-                            final isSelected = selectedType == type;
-                            return Expanded(
-                              child: GestureDetector(
-                                onTap: () =>
-                                    setModalState(() => selectedType = type),
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? AppColors.primary.withValues(
-                                            alpha: 0.1,
-                                          )
-                                        : Colors.transparent,
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : AppColors.border,
-                                      width: 1.5,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    type,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
+                      children: ['Bank', 'E-Wallet'].map((type) {
+                        final isSelected = selectedType == type;
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () =>
+                                setModalState(() => selectedType = type),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary.withValues(alpha: 0.1)
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.border,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                type,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary,
                                 ),
                               ),
-                            );
-                          })
-                          .toList(),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                     const SizedBox(height: 20),
 
@@ -637,7 +629,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                       decoration: InputDecoration(
                         hintText: selectedType == 'E-Wallet'
                             ? 'Misal: GoPay, DANA'
-                            : 'Misal: BCA, Mandiri',
+                            : 'Misal: BCA, Mandiri, BNI',
                         filled: true,
                         fillColor: AppColors.grey50,
                         contentPadding: const EdgeInsets.symmetric(
@@ -657,9 +649,9 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
 
                     // Account Number Input
                     Text(
-                      selectedType == 'Kartu Kredit'
-                          ? 'Nomor Kartu Kredit'
-                          : 'Nomor HP / Rekening',
+                      selectedType == 'E-Wallet'
+                          ? 'Nomor HP E-Wallet'
+                          : 'Nomor Rekening',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -671,9 +663,9 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                       controller: numberController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        hintText: selectedType == 'Kartu Kredit'
-                            ? '4111 2222 3333 4444'
-                            : '0812XXXXXXXX atau 88012XXXXXXXX',
+                        hintText: selectedType == 'E-Wallet'
+                            ? '0812XXXXXXXX'
+                            : '1234567890',
                         filled: true,
                         fillColor: AppColors.grey50,
                         contentPadding: const EdgeInsets.symmetric(
@@ -695,7 +687,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
-                        'Jadikan metode pembayaran utama',
+                        'Jadikan rekening utama',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -730,7 +722,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                           ),
                         ),
                         child: const Text(
-                          'Simpan Metode',
+                          'Simpan Rekening',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,

@@ -162,6 +162,15 @@ create index if not exists idx_chat_rooms_seller_id on public.chat_rooms (seller
 create index if not exists idx_chat_messages_room_id on public.chat_messages (room_id, id);
 create index if not exists idx_chat_messages_unread on public.chat_messages (room_id, sender_id, is_read);
 
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    alter publication supabase_realtime add table public.chat_messages;
+  end if;
+exception
+  when duplicate_object then null;
+end $$;
+
 alter table public.orders add column if not exists shipping_address text;
 alter table public.orders add column if not exists shipping_method text default 'EcoExpress';
 alter table public.orders add column if not exists shipping_cost integer default 0;

@@ -6,8 +6,8 @@ import 'screens/register_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/my_orders_screen.dart';
+import 'screens/sales_report_screen.dart';
 import 'screens/cart_screen.dart';
-import 'screens/payment_methods_screen.dart';
 import 'screens/help_center_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/terms_screen.dart';
@@ -73,8 +73,8 @@ class ThriftinApp extends StatelessWidget {
         '/notifications': (context) => const NotificationsScreen(),
         '/orders': (context) => const MyOrdersScreen(),
         '/sales': (context) => const MyOrdersScreen(sellerMode: true),
+        '/sales-report': (context) => const SalesReportScreen(),
         '/cart': (context) => const CartScreen(),
-        '/payment-methods': (context) => const PaymentMethodsScreen(),
         '/help-center': (context) => const HelpCenterScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/terms': (context) => const TermsScreen(),

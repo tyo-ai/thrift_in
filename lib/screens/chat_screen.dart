@@ -107,6 +107,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     final messages = await _chatService.getMessages(roomId);
+    messages.sort(_compareMessagesByTime);
     if (!mounted) return;
     setState(() {
       _messages = messages;
@@ -141,11 +142,24 @@ class _ChatScreenState extends State<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
       _scrollController.animateTo(
-        _scrollController.position.minScrollExtent,
+        _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOut,
       );
     });
+  }
+
+  int _compareMessagesByTime(Map<String, dynamic> a, Map<String, dynamic> b) {
+    final aTime = DateTime.tryParse(a['created_at']?.toString() ?? '');
+    final bTime = DateTime.tryParse(b['created_at']?.toString() ?? '');
+    if (aTime != null && bTime != null) {
+      final result = aTime.compareTo(bTime);
+      if (result != 0) return result;
+    }
+
+    final aId = int.tryParse(a['id']?.toString() ?? '') ?? 0;
+    final bId = int.tryParse(b['id']?.toString() ?? '') ?? 0;
+    return aId.compareTo(bId);
   }
 
   @override
@@ -307,13 +321,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   )
                 : ListView.builder(
                     controller: _scrollController,
-                    reverse: true,
                     padding: const EdgeInsets.all(16),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      final msg = _messages[_messages.length - 1 - index];
+                      final msg = _messages[index];
                       final isMine =
-                          msg['sender_id'] == UserService.currentUserId;
+                           msg['sender_id'] == UserService.currentUserId;
                       final offerAmount = msg['offer_amount'];
                       if (offerAmount != null) {
                         return _buildOfferCard(
@@ -592,7 +605,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
 // ─── Inbox List Screen ────────────────────────────────────────────────────────
 class ChatListScreen extends StatefulWidget {
-  const ChatListScreen({super.key});
+  final VoidCallback? onUnreadChanged;
+
+  const ChatListScreen({super.key, this.onUnreadChanged});
 
   @override
   State<ChatListScreen> createState() => _ChatListScreenState();
@@ -628,6 +643,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         _chats = chats;
         _isLoading = false;
       });
+      widget.onUnreadChanged?.call();
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -802,9 +818,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             horizontal: 6,
                             vertical: 3,
                           ),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: AppColors.error,
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
                             unreadCount > 99 ? '99+' : '$unreadCount',

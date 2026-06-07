@@ -7,6 +7,7 @@ import 'notifications_screen.dart';
 import 'product_detail_screen.dart';
 import '../services/user_service.dart';
 import '../services/product_service.dart';
+import '../services/order_service.dart';
 import 'settings_screen.dart';
 import 'saved_screen.dart';
 import 'cart_screen.dart';
@@ -36,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   List<Map<String, dynamic>> _myItems = [];
+  int _sellerUnopenedOrders = 0;
   bool _isLoading = true;
 
   @override
@@ -50,14 +52,20 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     try {
       if (UserService.currentUserId != null) {
-        final items = await ProductService().getProductsBySeller(
-          UserService.currentUserId!,
-        );
+        final userId = UserService.currentUserId!;
+        final items = await ProductService().getProductsBySeller(userId);
+        final sellerUnopenedOrders = await OrderService()
+            .getUnopenedOrdersCount(
+              userId,
+              sellerMode: true,
+              forceRefresh: true,
+            );
 
         if (!mounted) return;
 
         setState(() {
           _myItems = items;
+          _sellerUnopenedOrders = sellerUnopenedOrders;
           _isLoading = false;
         });
       } else {
@@ -65,6 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         setState(() {
           _myItems = [];
+          _sellerUnopenedOrders = 0;
           _isLoading = false;
         });
       }
@@ -73,9 +82,36 @@ class _ProfileScreenState extends State<ProfileScreen>
 
       setState(() {
         _myItems = [];
+        _sellerUnopenedOrders = 0;
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _openSalesOrders() async {
+    await Navigator.pushNamed(context, '/sales');
+    if (mounted) _loadData();
+  }
+
+  Widget _buildUnreadBadge(int count) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          height: 1,
+        ),
+      ),
+    );
   }
 
   Future<void> _toggleFavorite(Map<String, dynamic> item) async {
@@ -485,13 +521,20 @@ class _ProfileScreenState extends State<ProfileScreen>
             width: double.infinity,
             height: 42,
             child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pushNamed(context, '/sales');
-              },
+              onPressed: _openSalesOrders,
               icon: const Icon(Icons.storefront_outlined, size: 17),
-              label: const Text(
-                'Penjualan Saya',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Penjualan Saya',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                  ),
+                  if (_sellerUnopenedOrders > 0) ...[
+                    const SizedBox(width: 8),
+                    _buildUnreadBadge(_sellerUnopenedOrders),
+                  ],
+                ],
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,

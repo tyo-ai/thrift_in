@@ -88,6 +88,7 @@ class ChatService {
         .from('chat_messages')
         .select()
         .eq('room_id', roomId)
+        .order('created_at')
         .order('id');
 
     return results.map((row) => Map<String, dynamic>.from(row as Map)).toList();
@@ -129,6 +130,15 @@ class ChatService {
         .eq('is_read', 0);
 
     return results.length;
+  }
+
+  Future<int> getTotalUnreadCount(int userId) async {
+    final rooms = await getRoomsForUser(userId, forceRefresh: true);
+    var total = 0;
+    for (final room in rooms) {
+      total += int.tryParse(room['unread']?.toString() ?? '') ?? 0;
+    }
+    return total;
   }
 
   Future<void> markRoomAsRead({

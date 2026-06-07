@@ -21,6 +21,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
   List<Map<String, dynamic>> _orders = [];
   bool _isLoading = true;
 
+  int get _unopenedCount =>
+      _orders.where((order) => order['is_opened'] != true).length;
+
   @override
   void initState() {
     super.initState();
@@ -109,6 +112,31 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     } catch (e) {
       _showCustomSnackbar('Gagal menghapus: $e', AppColors.error);
     }
+  }
+
+  Future<void> _markOrderAsOpened(Map<String, dynamic> order) async {
+    final orderId = int.tryParse(order['id']?.toString() ?? '');
+    final userId = UserService.currentUserId;
+    if (orderId == null || userId == null || order['is_opened'] == true) {
+      return;
+    }
+
+    setState(() {
+      final index = _orders.indexWhere(
+        (item) => item['id']?.toString() == orderId.toString(),
+      );
+      if (index != -1) {
+        _orders[index] = Map<String, dynamic>.from(_orders[index])
+          ..['is_opened'] = true;
+      }
+      order['is_opened'] = true;
+    });
+
+    await _orderService.markOrderAsOpened(
+      orderId,
+      userId,
+      sellerMode: widget.sellerMode,
+    );
   }
 
   Future<void> _showReviewDialog(Map<String, dynamic> order) async {
@@ -376,13 +404,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          widget.sellerMode ? 'Penjualan Saya' : 'Pesanan Saya',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: AppColors.primary,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              widget.sellerMode ? 'Penjualan Saya' : 'Pesanan Saya',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.primary,
+              ),
+            ),
+            if (_unopenedCount > 0) ...[
+              const SizedBox(width: 8),
+              _buildUnreadBadge(_unopenedCount),
+            ],
+          ],
         ),
         centerTitle: false,
         actions: [
@@ -498,6 +535,38 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     );
   }
 
+  Widget _buildUnreadBadge(int count) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          height: 1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnreadDot() {
+    return Container(
+      width: 9,
+      height: 9,
+      decoration: const BoxDecoration(
+        color: AppColors.error,
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+
   Widget _buildOrderCard(Map<String, dynamic> order) {
     final status = order['status'] ?? 'Menunggu';
     final partyName = widget.sellerMode
@@ -507,12 +576,20 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     final productImg = order['product_image'] ?? '';
     final totalAmount = order['total_amount'] ?? 0;
     final createdAt = order['created_at'] ?? '';
+    final isOpened = order['is_opened'] == true;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: isOpened
+            ? AppColors.cardSurface
+            : AppColors.error.withValues(alpha: 0.035),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isOpened
+              ? Colors.transparent
+              : AppColors.error.withValues(alpha: 0.14),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -532,6 +609,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
               children: [
                 Row(
                   children: [
+                    if (!isOpened) ...[
+                      _buildUnreadDot(),
+                      const SizedBox(width: 8),
+                    ],
                     Icon(
                       widget.sellerMode
                           ? Icons.person_outline
@@ -678,7 +759,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                   children: [
                     // Detail & Action Button
                     OutlinedButton(
-                      onPressed: () => _showOrderDetailsBottomSheet(order),
+                      onPressed: () {
+                        _markOrderAsOpened(order);
+                        _showOrderDetailsBottomSheet(order);
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textPrimary,
                         side: BorderSide(color: AppColors.border),

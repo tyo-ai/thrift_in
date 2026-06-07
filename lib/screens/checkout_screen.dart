@@ -4,6 +4,7 @@ import '../services/order_service.dart';
 import '../services/user_service.dart';
 import '../services/cart_service.dart';
 import '../widgets/cached_product_image.dart';
+import 'duitku_payment_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -21,8 +22,59 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   int _selectedShipping = 0; // 0=EcoExpress, 1=ThriftShip
-  int _selectedPayment = 0; // 0=GoPay, 1=Transfer, 2=COD
+  int _selectedPayment = 0;
   final _addressController = TextEditingController();
+
+  static const List<_CheckoutPaymentMethod> _paymentMethods = [
+    _CheckoutPaymentMethod(
+      title: 'BCA Virtual Account',
+      subtitle: 'BCA VA sandbox Duitku',
+      icon: Icons.account_balance_rounded,
+      code: 'BC',
+    ),
+    _CheckoutPaymentMethod(
+      title: 'Mandiri Virtual Account',
+      subtitle: 'Mandiri VA H2H sandbox Duitku',
+      icon: Icons.account_balance_rounded,
+      code: 'M2',
+    ),
+    _CheckoutPaymentMethod(
+      title: 'BNI Virtual Account',
+      subtitle: 'BNI VA sandbox Duitku',
+      icon: Icons.account_balance_rounded,
+      code: 'I1',
+    ),
+    _CheckoutPaymentMethod(
+      title: 'BRI Virtual Account',
+      subtitle: 'BRIVA sandbox Duitku',
+      icon: Icons.account_balance_rounded,
+      code: 'BR',
+    ),
+    _CheckoutPaymentMethod(
+      title: 'OVO',
+      subtitle: 'E-wallet OVO sandbox Duitku',
+      icon: Icons.account_balance_wallet_rounded,
+      code: 'OV',
+    ),
+    _CheckoutPaymentMethod(
+      title: 'DANA',
+      subtitle: 'E-wallet DANA sandbox Duitku',
+      icon: Icons.account_balance_wallet_rounded,
+      code: 'DA',
+    ),
+    _CheckoutPaymentMethod(
+      title: 'QRIS',
+      subtitle: 'QRIS sandbox Duitku',
+      icon: Icons.qr_code_rounded,
+      code: 'SP',
+    ),
+    _CheckoutPaymentMethod(
+      title: 'Bayar di Tempat (COD)',
+      subtitle: 'Bayar langsung saat barang diterima',
+      icon: Icons.handshake_outlined,
+      code: null,
+    ),
+  ];
 
   @override
   void initState() {
@@ -72,12 +124,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     const discount = 5000;
     final totalAmount =
         widget.finalPrice + shippingCost + serviceFee - discount;
-    final paymentMethodString = _selectedPayment == 0
-        ? 'GoPay'
-        : _selectedPayment == 1
-        ? 'Transfer'
-        : 'COD';
+    final selectedPayment = _paymentMethods[_selectedPayment];
+    final paymentMethodString = selectedPayment.isCod
+        ? 'COD'
+        : 'Duitku ${selectedPayment.title}';
     final shippingMethod = _selectedShipping == 0 ? 'EcoExpress' : 'ThriftShip';
+
+    if (!selectedPayment.isCod) {
+      final result = await Navigator.push<DuitkuPaymentResult>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DuitkuPaymentScreen(
+            orderCode: 'THRIFTIN-${DateTime.now().millisecondsSinceEpoch}',
+            productName: widget.product['name']?.toString() ?? 'Produk',
+            totalAmount: totalAmount,
+            paymentMethodCode: selectedPayment.code!,
+          ),
+        ),
+      );
+      if (result == null) {
+        _showAppSnackBar('Pembayaran Duitku dibatalkan', isError: true);
+        return;
+      }
+      if (!result.isPaid) {
+        _showAppSnackBar('Pembayaran Duitku belum berhasil', isError: true);
+        return;
+      }
+    }
 
     final orderId = await OrderService().createOrder(
       productId: widget.product['id'],
@@ -327,28 +400,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _buildCard(
               title: 'Metode Pembayaran',
               child: Column(
-                children: [
-                  _buildPaymentOption(
-                    0,
-                    Icons.account_balance_wallet_outlined,
-                    'GoPay / E-wallet',
-                    'Pintar Bayarnya',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildPaymentOption(
-                    1,
-                    Icons.swap_horiz_rounded,
-                    'Transfer Bank',
-                    'BCA, Mandiri, BNI, BRI',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildPaymentOption(
-                    2,
-                    Icons.handshake_outlined,
-                    'Bayar di Tempat (COD)',
-                    '',
-                  ),
-                ],
+                children: List.generate(_paymentMethods.length, (index) {
+                  final method = _paymentMethods[index];
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == _paymentMethods.length - 1 ? 0 : 8,
+                    ),
+                    child: _buildPaymentOption(
+                      index,
+                      method.icon,
+                      method.title,
+                      method.subtitle,
+                    ),
+                  );
+                }),
               ),
             ),
             const SizedBox(height: 12),
@@ -653,4 +718,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ],
     );
   }
+}
+
+class _CheckoutPaymentMethod {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String? code;
+
+  const _CheckoutPaymentMethod({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.code,
+  });
+
+  bool get isCod => code == null;
 }

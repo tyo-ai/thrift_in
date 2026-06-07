@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../services/order_service.dart';
 import '../services/user_service.dart';
 import 'user_avatar.dart';
 
@@ -12,11 +13,14 @@ class SidebarDrawer extends StatefulWidget {
 
 class _SidebarDrawerState extends State<SidebarDrawer> {
   String _userName = 'Thrifter';
+  int _buyerUnopenedOrders = 0;
+  int _sellerUnopenedOrders = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+    _loadBadgeCounts();
   }
 
   void _loadUserProfile() {
@@ -25,6 +29,29 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
         _userName = UserService.currentUser!['name'] ?? 'Thrifter';
       });
     }
+  }
+
+  Future<void> _loadBadgeCounts() async {
+    final userId = UserService.currentUserId;
+    if (userId == null) return;
+
+    try {
+      final buyerCount = await OrderService().getUnopenedOrdersCount(
+        userId,
+        sellerMode: false,
+        forceRefresh: true,
+      );
+      final sellerCount = await OrderService().getUnopenedOrdersCount(
+        userId,
+        sellerMode: true,
+        forceRefresh: true,
+      );
+      if (!mounted) return;
+      setState(() {
+        _buyerUnopenedOrders = buyerCount;
+        _sellerUnopenedOrders = sellerCount;
+      });
+    } catch (_) {}
   }
 
   @override
@@ -116,25 +143,31 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
             _buildMenuItem(
               icon: Icons.receipt_long_outlined,
               label: 'Pesanan Saya',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/orders');
+              badgeCount: _buyerUnopenedOrders,
+              onTap: () async {
+                final navigator = Navigator.of(context);
+                navigator.pop();
+                await navigator.pushNamed('/orders');
+                if (mounted) _loadBadgeCounts();
               },
             ),
             _buildMenuItem(
               icon: Icons.storefront_outlined,
               label: 'Penjualan Saya',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/sales');
+              badgeCount: _sellerUnopenedOrders,
+              onTap: () async {
+                final navigator = Navigator.of(context);
+                navigator.pop();
+                await navigator.pushNamed('/sales');
+                if (mounted) _loadBadgeCounts();
               },
             ),
             _buildMenuItem(
-              icon: Icons.account_balance_wallet_outlined,
-              label: 'Metode Pembayaran',
+              icon: Icons.analytics_outlined,
+              label: 'Laporan Penjualan',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/payment-methods');
+                Navigator.pushNamed(context, '/sales-report');
               },
             ),
             _buildMenuItem(
@@ -188,6 +221,7 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
     required VoidCallback onTap,
     Color? iconColor,
     Color? textColor,
+    int badgeCount = 0,
   }) {
     return ListTile(
       leading: Container(
@@ -207,9 +241,39 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
           color: textColor ?? AppColors.textPrimary,
         ),
       ),
-      trailing: Icon(Icons.chevron_right, color: AppColors.grey300, size: 22),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (badgeCount > 0) ...[
+            _buildBadge(badgeCount),
+            const SizedBox(width: 8),
+          ],
+          Icon(Icons.chevron_right, color: AppColors.grey300, size: 22),
+        ],
+      ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+    );
+  }
+
+  Widget _buildBadge(int count) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          height: 1,
+        ),
+      ),
     );
   }
 }

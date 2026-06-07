@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../services/chat_service.dart';
+import '../services/chat_notification_service.dart';
+import '../services/order_service.dart';
+import '../services/user_service.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'sell_screen.dart';
@@ -16,6 +20,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   int _chatRefreshVersion = 0;
+  int _chatUnreadCount = 0;
+  int _orderUnreadCount = 0;
   late final List<Widget?> _pages;
 
   @override
@@ -23,6 +29,14 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _pages = List<Widget?>.filled(5, null);
     _pages[0] = const HomeScreen();
+    ChatNotificationService.instance.startForCurrentUser();
+    _loadBadgeCounts();
+  }
+
+  @override
+  void dispose() {
+    ChatNotificationService.instance.stop();
+    super.dispose();
   }
 
   Widget _buildPage(int index) {
@@ -34,7 +48,10 @@ class _MainScreenState extends State<MainScreen> {
       case 2:
         return const SellScreen();
       case 3:
-        return ChatListScreen(key: ValueKey(_chatRefreshVersion));
+        return ChatListScreen(
+          key: ValueKey(_chatRefreshVersion),
+          onUnreadChanged: _loadBadgeCounts,
+        );
       case 4:
         return const ProfileScreen();
       default:
@@ -46,10 +63,36 @@ class _MainScreenState extends State<MainScreen> {
     if (index == 3) {
       _chatRefreshVersion += 1;
       _pages[index] = _buildPage(index);
+      _loadBadgeCounts();
+    } else if (index == 4) {
+      _loadBadgeCounts();
+      if (_pages[index] == null) {
+        _pages[index] = _buildPage(index);
+      }
     } else if (_pages[index] == null) {
       _pages[index] = _buildPage(index);
     }
     setState(() => _currentIndex = index);
+  }
+
+  Future<void> _loadBadgeCounts() async {
+    final userId = UserService.currentUserId;
+    if (userId == null) return;
+
+    try {
+      final chatUnread = await ChatService().getTotalUnreadCount(userId);
+      final orderUnread = await OrderService().getTotalUnopenedOrdersCount(
+        userId,
+        forceRefresh: true,
+      );
+      if (!mounted) return;
+      setState(() {
+        _chatUnreadCount = chatUnread;
+        _orderUnreadCount = orderUnread;
+      });
+    } catch (_) {
+      // Badge counts are helpful hints; keep navigation usable if loading fails.
+    }
   }
 
   @override
@@ -96,12 +139,14 @@ class _MainScreenState extends State<MainScreen> {
                   outlinedIcon: Icons.chat_bubble_outline,
                   label: 'Chat',
                   index: 3,
+                  badgeCount: _chatUnreadCount,
                 ),
                 _buildNavItem(
                   icon: Icons.person_rounded,
                   outlinedIcon: Icons.person_outline,
                   label: 'Profil',
                   index: 4,
+                  badgeCount: _orderUnreadCount,
                 ),
               ],
             ),
@@ -116,6 +161,7 @@ class _MainScreenState extends State<MainScreen> {
     required IconData outlinedIcon,
     required String label,
     required int index,
+    int badgeCount = 0,
   }) {
     final isSelected = _currentIndex == index;
     return GestureDetector(
@@ -126,10 +172,21 @@ class _MainScreenState extends State<MainScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? icon : outlinedIcon,
-              size: 26,
-              color: isSelected ? AppColors.primary : AppColors.grey400,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  isSelected ? icon : outlinedIcon,
+                  size: 26,
+                  color: isSelected ? AppColors.primary : AppColors.grey400,
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    top: -5,
+                    right: -8,
+                    child: _buildBadge(badgeCount),
+                  ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
@@ -141,6 +198,27 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(int count) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          height: 1,
         ),
       ),
     );
