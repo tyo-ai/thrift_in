@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
 import '../services/chat_service.dart';
 import '../services/chat_notification_service.dart';
+import '../services/supabase_config.dart';
 import '../services/user_service.dart';
 import '../widgets/cached_product_image.dart';
 import '../widgets/skeleton_loaders.dart';
@@ -25,11 +29,14 @@ class _ChatScreenState extends State<ChatScreen> {
   final _msgController = TextEditingController();
   final _scrollController = ScrollController();
   final ChatService _chatService = ChatService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   Map<String, dynamic>? _room;
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
-  StreamSubscription<Map<String, dynamic>>? _messageSubscription;
+  bool _isSendingImage = false;
+  XFile? _selectedImage;
+  RealtimeChannel? _roomRealtimeChannel;
 
   Map<String, dynamic> get _product {
     final roomProduct = _room?['products'];
@@ -98,18 +105,14 @@ class _ChatScreenState extends State<ChatScreen> {
           userId: currentUserId,
         );
 
-        _messageSubscription?.cancel();
-        _messageSubscription = ChatNotificationService.instance.messageStream.listen((message) {
-          final msgRoomId = int.tryParse(message['room_id']?.toString() ?? '');
-          if (msgRoomId == roomId) {
-            _chatService.markRoomAsRead(roomId: roomId, userId: currentUserId);
-            _loadMessages();
-          }
-        });
+        await _loadMessages();
+        _subscribeToRoomMessages(roomId, currentUserId);
+        return;
       }
 
       await _loadMessages();
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Chat prepare failed: $error');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -131,11 +134,54 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
+  void _subscribeToRoomMessages(int roomId, int currentUserId) {
+    try {
+      final oldChannel = _roomRealtimeChannel;
+      _roomRealtimeChannel = null;
+      if (oldChannel != null) {
+        SupabaseConfig.client.removeChannel(oldChannel);
+      }
+
+      _roomRealtimeChannel = SupabaseConfig.client
+          .channel('chat-room-$roomId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'chat_messages',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'room_id',
+              value: roomId,
+            ),
+            callback: (_) async {
+              if (!mounted) return;
+              await _chatService.markRoomAsRead(
+                roomId: roomId,
+                userId: currentUserId,
+              );
+              await _loadMessages();
+            },
+          )
+          .subscribe((status, error) {
+            debugPrint(
+              'Chat room realtime $roomId: $status${error == null ? '' : ' - $error'}',
+            );
+          });
+    } catch (error) {
+      debugPrint('Chat room realtime subscribe failed: $error');
+    }
+  }
+
   Future<void> _sendMessage() async {
     final message = _msgController.text.trim();
     final roomId = int.tryParse(_room?['id']?.toString() ?? '');
     final senderId = UserService.currentUserId;
-    if (message.isEmpty || roomId == null || senderId == null) return;
+    if (roomId == null || senderId == null) return;
+    if (_selectedImage != null) {
+      await _sendSelectedImage(roomId: roomId, senderId: senderId);
+      return;
+    }
+    if (message.isEmpty) return;
 
     _msgController.clear();
     await _chatService.sendMessage(
@@ -146,13 +192,111 @@ class _ChatScreenState extends State<ChatScreen> {
     await _loadMessages();
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    if (_isSendingImage) return;
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 82,
+        maxWidth: 1600,
+      );
+      if (picked == null) return;
+
+      if (mounted) setState(() => _selectedImage = picked);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal memilih gambar')),
+      );
+    }
+  }
+
+  Future<void> _sendSelectedImage({
+    required int roomId,
+    required int senderId,
+  }) async {
+    final selectedImage = _selectedImage;
+    if (selectedImage == null || _isSendingImage) return;
+
+    try {
+      if (mounted) setState(() => _isSendingImage = true);
+      final imageUrl = await _chatService.uploadChatImageBytes(
+        bytes: await selectedImage.readAsBytes(),
+        originalPath: selectedImage.path,
+        roomId: roomId,
+        senderId: senderId,
+      );
+      await _chatService.sendMessage(
+        roomId: roomId,
+        senderId: senderId,
+        message: '${ChatService.imageMessagePrefix}$imageUrl',
+      );
+      await _loadMessages();
+    } catch (error) {
+      debugPrint('Chat image send failed: $error');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal mengirim gambar')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingImage = false;
+          _selectedImage = null;
+        });
+      }
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Pilih dari galeri'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined),
+                  title: const Text('Ambil foto'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     final roomId = int.tryParse(_room?['id']?.toString() ?? '');
     if (roomId != null && ChatScreen.activeRoomId == roomId) {
       ChatScreen.activeRoomId = null;
     }
-    _messageSubscription?.cancel();
+    final channel = _roomRealtimeChannel;
+    _roomRealtimeChannel = null;
+    if (channel != null) {
+      SupabaseConfig.client.removeChannel(channel);
+    }
     _msgController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -348,16 +492,36 @@ class _ChatScreenState extends State<ChatScreen> {
                       final isMine =
                            msg['sender_id'] == UserService.currentUserId;
                       final offerAmount = msg['offer_amount'];
+                      Widget messageWidget;
                       if (offerAmount != null) {
-                        return _buildOfferCard(
+                        messageWidget = _buildOfferCard(
                           _formatPrice(offerAmount),
                           _formatTime(msg['created_at']),
                         );
+                      } else {
+                        final messageText = msg['message']?.toString() ?? '';
+                        final imageUrl = ChatService.imageUrlFromMessage(
+                          messageText,
+                        );
+                        if (imageUrl != null) {
+                          messageWidget = _buildImageBubble(
+                            imageUrl,
+                            !isMine,
+                            _formatTime(msg['created_at']),
+                          );
+                        } else {
+                          messageWidget = _buildBubble(
+                            messageText,
+                            !isMine,
+                            _formatTime(msg['created_at']),
+                          );
+                        }
                       }
-                      return _buildBubble(
-                        msg['message']?.toString() ?? '',
-                        !isMine,
-                        _formatTime(msg['created_at']),
+
+                      return _buildDismissibleMessage(
+                        message: msg,
+                        isMine: isMine,
+                        child: messageWidget,
                       );
                     },
                   ),
@@ -380,56 +544,82 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.image_outlined,
-                    color: AppColors.textHint,
+                if (_selectedImage != null) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _buildSelectedImagePreview(),
                   ),
-                  onPressed: () {},
-                ),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
+                  const SizedBox(height: 10),
+                ],
+                Row(
+                  children: [
+                    IconButton(
+                      icon: _isSendingImage
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.image_outlined,
+                              color: AppColors.textHint,
+                            ),
+                      onPressed: _isSendingImage ? null : _showImageSourceSheet,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.grey100,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: TextField(
-                      controller: _msgController,
-                      decoration: const InputDecoration(
-                        hintText: 'Ketik pesan...',
-                        hintStyle: TextStyle(
-                          color: AppColors.textHint,
-                          fontSize: 14,
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
                         ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
+                        decoration: BoxDecoration(
+                          color: AppColors.grey100,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: TextField(
+                          controller: _msgController,
+                          enabled: !_isSendingImage,
+                          decoration: InputDecoration(
+                            hintText: _selectedImage == null
+                                ? 'Ketik pesan...'
+                                : 'Gambar siap dikirim',
+                            hintStyle: const TextStyle(
+                              color: AppColors.textHint,
+                              fontSize: 14,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _sendMessage,
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: _isSendingImage ? null : _sendMessage,
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: _isSendingImage
+                              ? AppColors.grey300
+                              : AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -457,6 +647,92 @@ class _ChatScreenState extends State<ChatScreen> {
     final date = DateTime.tryParse(value?.toString() ?? '');
     if (date == null) return '';
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildSelectedImagePreview() {
+    final selectedImage = _selectedImage;
+    if (selectedImage == null) return const SizedBox.shrink();
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _AspectRatioChatImage(
+          imageProvider: FileImage(File(selectedImage.path)),
+          maxWidth: 150,
+          maxHeight: 120,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        Positioned(
+          top: -8,
+          right: -8,
+          child: Material(
+            color: AppColors.textPrimary,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: _isSendingImage
+                  ? null
+                  : () => setState(() => _selectedImage = null),
+              child: const SizedBox(
+                width: 26,
+                height: 26,
+                child: Icon(Icons.close_rounded, color: Colors.white, size: 16),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDismissibleMessage({
+    required Map<String, dynamic> message,
+    required bool isMine,
+    required Widget child,
+  }) {
+    final messageId = int.tryParse(message['id']?.toString() ?? '');
+    final roomId = int.tryParse(message['room_id']?.toString() ?? '');
+    if (!isMine || messageId == null || roomId == null) return child;
+
+    return Dismissible(
+      key: ValueKey('chat-message-$messageId'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(right: 18),
+        alignment: Alignment.centerRight,
+        decoration: BoxDecoration(
+          color: AppColors.error,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+      ),
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Hapus pesan?'),
+                content: const Text('Pesan ini akan dihapus dari chat.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Batal'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Hapus'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+      },
+      onDismissed: (_) async {
+        await _chatService.deleteMessage(roomId: roomId, messageId: messageId);
+        await _loadMessages();
+      },
+      child: child,
+    );
   }
 
   Widget _buildBubble(String text, bool isSeller, String time) {
@@ -504,6 +780,51 @@ class _ChatScreenState extends State<ChatScreen> {
                       height: 1.4,
                     ),
                   ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  time,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppColors.textHint,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageBubble(String imageUrl, bool isSeller, String time) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: isSeller
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (isSeller) ...[
+            UserAvatar(
+              name: _otherUserName,
+              photoPath: _otherUserPhoto,
+              radius: 14,
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: isSeller
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.end,
+              children: [
+                _AspectRatioChatImage(
+                  imageProvider: NetworkImage(imageUrl),
+                  maxWidth: 230,
+                  maxHeight: 300,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -811,9 +1132,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ),
                   ),
                   subtitle: Text(
-                    chat['last_message']?.toString() ??
-                        product['name']?.toString() ??
-                        'Mulai percakapan',
+                    ChatService.previewText(
+                      chat['last_message']?.toString() ??
+                          product['name']?.toString() ??
+                          'Mulai percakapan',
+                    ),
                     style: TextStyle(
                       fontSize: 12,
                       color: hasUnread
@@ -891,5 +1214,103 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final date = DateTime.tryParse(value?.toString() ?? '');
     if (date == null) return '';
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _AspectRatioChatImage extends StatefulWidget {
+  final ImageProvider imageProvider;
+  final double maxWidth;
+  final double maxHeight;
+  final BorderRadius borderRadius;
+
+  const _AspectRatioChatImage({
+    required this.imageProvider,
+    required this.maxWidth,
+    required this.maxHeight,
+    required this.borderRadius,
+  });
+
+  @override
+  State<_AspectRatioChatImage> createState() => _AspectRatioChatImageState();
+}
+
+class _AspectRatioChatImageState extends State<_AspectRatioChatImage> {
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+  double? _aspectRatio;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AspectRatioChatImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageProvider != widget.imageProvider) {
+      _resolveImage();
+    }
+  }
+
+  @override
+  void dispose() {
+    _removeListener();
+    super.dispose();
+  }
+
+  void _removeListener() {
+    final stream = _stream;
+    final listener = _listener;
+    if (stream != null && listener != null) {
+      stream.removeListener(listener);
+    }
+    _stream = null;
+    _listener = null;
+  }
+
+  void _resolveImage() {
+    _removeListener();
+    _aspectRatio = null;
+    final stream = widget.imageProvider.resolve(ImageConfiguration.empty);
+    final listener = ImageStreamListener((info, _) {
+      final width = info.image.width;
+      final height = info.image.height;
+      if (!mounted || width <= 0 || height <= 0) return;
+      setState(() => _aspectRatio = width / height);
+    });
+    _stream = stream;
+    _listener = listener;
+    stream.addListener(listener);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = _aspectRatio ?? 1;
+    var width = widget.maxWidth;
+    var height = width / ratio;
+    if (height > widget.maxHeight) {
+      height = widget.maxHeight;
+      width = height * ratio;
+    }
+    width = width.clamp(96.0, widget.maxWidth);
+    height = height.clamp(72.0, widget.maxHeight);
+
+    return ClipRRect(
+      borderRadius: widget.borderRadius,
+      child: Image(
+        image: widget.imageProvider,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Container(
+          width: width,
+          height: height,
+          color: AppColors.grey100,
+          alignment: Alignment.center,
+          child: const Icon(Icons.broken_image_outlined),
+        ),
+      ),
+    );
   }
 }

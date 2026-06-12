@@ -16,9 +16,7 @@ class AndroidNotificationService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    const androidSettings = AndroidInitializationSettings(
-      'ic_notification',
-    );
+    const androidSettings = AndroidInitializationSettings('ic_notification');
     const darwinSettings = DarwinInitializationSettings();
     const settings = InitializationSettings(
       android: androidSettings,
@@ -69,18 +67,38 @@ class AndroidNotificationService {
     _isInitialized = true;
   }
 
+  Future<bool> _canShowNotifications() async {
+    final androidPlugin = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    _notificationsEnabled =
+        await androidPlugin?.areNotificationsEnabled() ?? _notificationsEnabled;
+    if (!_notificationsEnabled) {
+      debugPrint('Thriftin notifications: Android permission is disabled.');
+    }
+    return _notificationsEnabled;
+  }
+
   Future<void> showChatNotification({
     required int roomId,
     required String senderName,
     required String message,
   }) async {
     await initialize();
-    if (!_notificationsEnabled) return;
+    if (!await _canShowNotifications()) return;
+    final trimmedSenderName = senderName.trim().isEmpty
+        ? 'User Thriftin'
+        : senderName.trim();
+    final notificationMessage = message.trim().isEmpty
+        ? 'Kamu menerima pesan baru'
+        : message.trim();
 
     const androidDetails = AndroidNotificationDetails(
       'thriftin_chat',
       'Chat Thriftin',
       channelDescription: 'Notifikasi untuk pesan chat baru',
+      icon: 'ic_notification',
       importance: Importance.high,
       priority: Priority.high,
       category: AndroidNotificationCategory.message,
@@ -88,8 +106,8 @@ class AndroidNotificationService {
       ticker: 'Pesan baru Thriftin',
       playSound: true,
       enableVibration: true,
-      color: Color(0xFF1B8755),
-      largeIcon: DrawableResourceAndroidBitmap('ic_launcher'),
+      color: Color(0xFF159A5B),
+      subText: 'Chat Thriftin',
     );
     const darwinDetails = DarwinNotificationDetails();
     const details = NotificationDetails(
@@ -100,8 +118,8 @@ class AndroidNotificationService {
 
     await _plugin.show(
       id: roomId,
-      title: senderName,
-      body: message.isEmpty ? 'Kamu menerima pesan baru' : message,
+      title: 'Pesan dari $trimmedSenderName',
+      body: notificationMessage,
       notificationDetails: details,
       payload: 'chat:$roomId',
     );
@@ -114,12 +132,13 @@ class AndroidNotificationService {
     String? payload,
   }) async {
     await initialize();
-    if (!_notificationsEnabled) return;
+    if (!await _canShowNotifications()) return;
 
     const androidDetails = AndroidNotificationDetails(
       'thriftin_general',
       'Notifikasi Thriftin',
       channelDescription: 'Notifikasi umum transaksi dan pesanan',
+      icon: 'ic_notification',
       importance: Importance.high,
       priority: Priority.high,
       visibility: NotificationVisibility.public,
@@ -127,7 +146,6 @@ class AndroidNotificationService {
       playSound: true,
       enableVibration: true,
       color: Color(0xFF1B8755),
-      largeIcon: DrawableResourceAndroidBitmap('ic_launcher'),
     );
     const darwinDetails = DarwinNotificationDetails();
     const details = NotificationDetails(

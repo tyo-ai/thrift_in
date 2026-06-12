@@ -5,6 +5,7 @@ import 'android_notification_service.dart';
 import 'chat_service.dart';
 import 'supabase_config.dart';
 import 'user_service.dart';
+import '../screens/chat_screen.dart';
 
 class ChatNotificationService {
   ChatNotificationService._();
@@ -106,10 +107,15 @@ class ChatNotificationService {
     // Trigger stream for active chat screens to refresh in real-time
     _messageController.add(record);
 
+    if (ChatScreen.activeRoomId == roomId) {
+      debugPrint('Chat notifications: skipped active room $roomId.');
+      return;
+    }
+
     await AndroidNotificationService.instance.showChatNotification(
       roomId: roomId,
       senderName: senderName,
-      message: record['message']?.toString() ?? '',
+      message: ChatService.previewText(record['message']?.toString() ?? ''),
     );
   }
 

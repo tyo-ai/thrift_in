@@ -1,8 +1,28 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'supabase_config.dart';
 
 class ChatService {
+  static const String imageMessagePrefix = '__thriftin_image__:';
   static const Duration _cacheTtl = Duration(seconds: 45);
   static final Map<int, _ChatRoomsCacheEntry> _roomsCache = {};
+
+  static bool isImageMessage(String message) =>
+      imageUrlFromMessage(message) != null;
+
+  static String? imageUrlFromMessage(String message) {
+    final trimmed = message.trim();
+    if (!trimmed.startsWith(imageMessagePrefix)) return null;
+    final url = trimmed.substring(imageMessagePrefix.length).trim();
+    return url.isEmpty ? null : url;
+  }
+
+  static String previewText(String message) {
+    return isImageMessage(message) ? 'Mengirim gambar' : message;
+  }
 
   Future<Map<String, dynamic>> getOrCreateRoom({
     required int productId,
@@ -101,6 +121,9 @@ class ChatService {
     int? offerAmount,
   }) async {
     final now = DateTime.now().toIso8601String();
+    final preview = offerAmount == null
+        ? previewText(message)
+        : 'Menawarkan Rp $offerAmount';
     await SupabaseConfig.client.from('chat_messages').insert({
       'room_id': roomId,
       'sender_id': senderId,
@@ -112,13 +135,80 @@ class ChatService {
     await SupabaseConfig.client
         .from('chat_rooms')
         .update({
-          'last_message': offerAmount == null
-              ? message
-              : 'Menawarkan Rp $offerAmount',
+          'last_message': preview,
           'last_message_at': now,
         })
         .eq('id', roomId);
     _roomsCache.clear();
+  }
+
+  Future<String> uploadChatImage({
+    required File imageFile,
+    required int roomId,
+    required int senderId,
+  }) async {
+    if (!await imageFile.exists()) {
+      throw ArgumentError('File gambar chat tidak ditemukan.');
+    }
+
+    final extension = imageFile.path.split('.').last.toLowerCase();
+    final safeExtension = extension.isEmpty ? 'jpg' : extension;
+    final objectPath =
+        'chat/$roomId/$senderId-${DateTime.now().microsecondsSinceEpoch}.$safeExtension';
+
+    await SupabaseConfig.client.storage
+        .from('product-images')
+        .upload(
+          objectPath,
+          imageFile,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: safeExtension == 'png' ? 'image/png' : 'image/jpeg',
+          ),
+        );
+
+    return SupabaseConfig.client.storage
+        .from('product-images')
+        .getPublicUrl(objectPath);
+  }
+
+  Future<String> uploadChatImageBytes({
+    required Uint8List bytes,
+    required String originalPath,
+    required int roomId,
+    required int senderId,
+  }) async {
+    if (bytes.isEmpty) {
+      throw ArgumentError('File gambar chat kosong.');
+    }
+
+    final extension = originalPath.split('.').last.toLowerCase();
+    final safeExtension = extension.isEmpty || extension.length > 5
+        ? 'jpg'
+        : extension;
+    final contentType = switch (safeExtension) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'gif' => 'image/gif',
+      _ => 'image/jpeg',
+    };
+    final objectPath =
+        'chat/$roomId/$senderId-${DateTime.now().microsecondsSinceEpoch}.$safeExtension';
+
+    await SupabaseConfig.client.storage
+        .from('product-images')
+        .uploadBinary(
+          objectPath,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: contentType,
+          ),
+        );
+
+    return SupabaseConfig.client.storage
+        .from('product-images')
+        .getPublicUrl(objectPath);
   }
 
   Future<int> getUnreadCount(int roomId, int userId) async {
@@ -155,6 +245,40 @@ class ChatService {
 
   Future<void> deleteRoom(int roomId) async {
     await SupabaseConfig.client.from('chat_rooms').delete().eq('id', roomId);
+    _roomsCache.clear();
+  }
+
+  Future<void> deleteMessage({
+    required int roomId,
+    required int messageId,
+  }) async {
+    await SupabaseConfig.client
+        .from('chat_messages')
+        .delete()
+        .eq('id', messageId);
+
+    final latestMessages = await SupabaseConfig.client
+        .from('chat_messages')
+        .select('message, created_at')
+        .eq('room_id', roomId)
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .limit(1);
+
+    final latest = latestMessages.isEmpty
+        ? null
+        : Map<String, dynamic>.from(latestMessages.first as Map);
+
+    await SupabaseConfig.client
+        .from('chat_rooms')
+        .update({
+          'last_message': latest == null
+              ? 'Mulai percakapan'
+              : previewText(latest['message']?.toString() ?? ''),
+          'last_message_at':
+              latest?['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        })
+        .eq('id', roomId);
     _roomsCache.clear();
   }
 
