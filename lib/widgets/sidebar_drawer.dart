@@ -241,16 +241,7 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
           color: textColor ?? AppColors.textPrimary,
         ),
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (badgeCount > 0) ...[
-            _buildBadge(badgeCount),
-            const SizedBox(width: 8),
-          ],
-          Icon(Icons.chevron_right, color: AppColors.grey300, size: 22),
-        ],
-      ),
+      trailing: badgeCount > 0 ? _buildBadge(badgeCount) : null,
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
     );
@@ -258,15 +249,15 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
 
   Widget _buildBadge(int count) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-      padding: const EdgeInsets.symmetric(horizontal: 5),
-      decoration: BoxDecoration(
+      width: 22,
+      height: 22,
+      decoration: const BoxDecoration(
         color: AppColors.error,
-        borderRadius: BorderRadius.circular(999),
+        shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
       child: Text(
-        count > 99 ? '99+' : '$count',
+        count > 99 ? '99' : '$count',
         style: const TextStyle(
           color: Colors.white,
           fontSize: 10,

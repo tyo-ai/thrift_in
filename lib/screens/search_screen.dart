@@ -935,7 +935,7 @@ class _SearchScreenState extends State<SearchScreen> {
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.56,
+        childAspectRatio: 0.62,
       ),
       itemBuilder: (context, index) {
         if (index == _results.length) {
@@ -1182,7 +1182,10 @@ class _SearchScreenState extends State<SearchScreen> {
         children: [
           Stack(
             children: [
-              _buildImage(imageUrl, height: 120, width: double.infinity),
+              AspectRatio(
+                aspectRatio: 1,
+                child: _buildImage(imageUrl, width: double.infinity),
+              ),
               Positioned(
                 top: 8,
                 right: 8,
@@ -1294,25 +1297,29 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSearchCardImage(String imageUrl) {
     if (imageUrl.trim().isEmpty) {
-      return _buildImagePlaceholder();
+      return AspectRatio(aspectRatio: 1, child: _buildImagePlaceholder());
     }
 
     if (imageUrl.startsWith('assets/')) {
-      return Image.asset(
-        imageUrl,
-        width: double.infinity,
-        height: 142,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _buildImagePlaceholder(),
+      return AspectRatio(
+        aspectRatio: 1,
+        child: Image.asset(
+          imageUrl,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _buildImagePlaceholder(),
+        ),
       );
     }
 
-    return CachedProductImage(
-      imageUrl: imageUrl,
-      width: double.infinity,
-      height: 142,
-      fit: BoxFit.cover,
-      memCacheWidth: 420,
+    return AspectRatio(
+      aspectRatio: 1,
+      child: CachedProductImage(
+        imageUrl: imageUrl,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        memCacheWidth: 420,
+      ),
     );
   }
 

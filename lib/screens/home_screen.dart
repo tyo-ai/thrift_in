@@ -606,7 +606,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisCount: 2,
           crossAxisSpacing: 12,
           mainAxisSpacing: 14,
-          childAspectRatio: 0.56,
+          childAspectRatio: 0.62,
         ),
         itemBuilder: (context, index) {
           final product = _products[index];
@@ -676,10 +676,12 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Stack(
             children: [
-              _buildImage(
-                _text(product['imageUrl'], ''),
-                height: 120,
-                width: double.infinity,
+              AspectRatio(
+                aspectRatio: 1,
+                child: _buildImage(
+                  _text(product['imageUrl'], ''),
+                  width: double.infinity,
+                ),
               ),
               Positioned(
                 top: 8,

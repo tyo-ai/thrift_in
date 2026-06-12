@@ -167,7 +167,7 @@ class _LiveBiddingScreenState extends State<LiveBiddingScreen> {
               if (_isLoading)
                 SkeletonLoaders.productGrid(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  childAspectRatio: 0.58,
+                  childAspectRatio: 0.65,
                 )
               else
                 Padding(
@@ -180,7 +180,7 @@ class _LiveBiddingScreenState extends State<LiveBiddingScreen> {
                           crossAxisCount: 2,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 16,
-                          childAspectRatio: 0.58,
+                          childAspectRatio: 0.65,
                         ),
                     itemCount: _biddingItems.length,
                     itemBuilder: (context, index) {

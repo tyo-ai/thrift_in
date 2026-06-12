@@ -95,11 +95,11 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildUnreadBadge(int count) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-      padding: const EdgeInsets.symmetric(horizontal: 5),
-      decoration: BoxDecoration(
+      width: 20,
+      height: 20,
+      decoration: const BoxDecoration(
         color: AppColors.error,
-        borderRadius: BorderRadius.circular(999),
+        shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
       child: Text(
@@ -590,7 +590,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.66,
+        childAspectRatio: 0.62,
       ),
       itemBuilder: (context, index) {
         final item = items[index];
@@ -641,7 +641,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           Stack(
             children: [
-              _buildProductImage(imageUrl),
+              AspectRatio(
+                aspectRatio: 1,
+                child: _buildProductImage(imageUrl),
+              ),
               Positioned(
                 top: 8,
                 right: 8,
@@ -664,102 +667,62 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ],
                 ),
               ),
-              if (isBid)
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFB21A),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.local_offer_rounded,
-                          size: 9,
-                          color: Color(0xFF5A3500),
-                        ),
-                        SizedBox(width: 3),
-                        Text(
-                          'Lelang',
-                          style: TextStyle(
-                            fontSize: 8,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF5A3500),
-                          ),
-                        ),
-                      ],
+              Positioned(
+                left: 8,
+                bottom: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isBid
+                        ? const Color(0xFFFFB21A)
+                        : AppColors.primary.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    badge,
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      color: isBid ? const Color(0xFF5A3500) : Colors.white,
                     ),
                   ),
                 ),
+              ),
             ],
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 3, 6, 0),
-            child: _buildRatingMeta(item),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 1, 6, 0),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
             child: Text(
               name,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11.5,
-                height: 1.1,
-                fontWeight: FontWeight.w800,
+              style: const TextStyle(
+                fontSize: 14.5,
+                height: 1.18,
+                fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 1, 6, 0),
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
             child: Row(
               children: [
-                Icon(
-                  Icons.verified_rounded,
-                  color: AppColors.primary,
-                  size: 11,
+                const Icon(
+                  Icons.location_on_outlined,
+                  color: AppColors.textSecondary,
+                  size: 13,
                 ),
-                const SizedBox(width: 2),
+                const SizedBox(width: 3),
                 Expanded(
                   child: Text(
-                    '${_text(item['storeName'] ?? item['store'], 'Toko Saya')} · $location',
+                    location,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isBid
-                        ? const Color(0xFFFFF2CF)
-                        : const Color(0xFFE7F6EF),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    badge,
-                    style: TextStyle(
-                      fontSize: 7,
-                      fontWeight: FontWeight.w800,
-                      color: isBid
-                          ? const Color(0xFFB96C00)
-                          : AppColors.primary,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -767,13 +730,18 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 2, 6, 4),
+            padding: const EdgeInsets.fromLTRB(10, 5, 10, 0),
+            child: _buildRatingMeta(item),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
             child: Text(
               _formatPrice(item['price']),
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 16,
+                height: 1.05,
                 fontWeight: FontWeight.w900,
-                color: AppColors.textPrimary,
+                color: isBid ? const Color(0xFFB96C00) : AppColors.primary,
               ),
             ),
           ),
@@ -809,9 +777,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (imageUrl.startsWith('assets/')) {
       return Image.asset(
         imageUrl,
-        height: 125,
         width: double.infinity,
-        fit: BoxFit.contain,
+        fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return _buildImagePlaceholder();
         },
@@ -820,16 +787,14 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     return CachedProductImage(
       imageUrl: imageUrl,
-      height: 125,
       width: double.infinity,
-      fit: BoxFit.contain,
+      fit: BoxFit.cover,
       memCacheWidth: 420,
     );
   }
 
   Widget _buildImagePlaceholder() {
     return Container(
-      height: 125,
       width: double.infinity,
       color: const Color(0xFFEFF3F6),
       child: Icon(

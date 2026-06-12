@@ -562,24 +562,16 @@ class _SellScreenState extends State<SellScreen> {
               toolbarColor: AppColors.primary,
               toolbarWidgetColor: Colors.white,
               initAspectRatio: CropAspectRatioPreset.square,
-              lockAspectRatio: false,
+              lockAspectRatio: true,
               activeControlsWidgetColor: AppColors.primary,
               aspectRatioPresets: [
                 CropAspectRatioPreset.square,
-                CropAspectRatioPreset.ratio3x2,
-                CropAspectRatioPreset.original,
-                CropAspectRatioPreset.ratio4x3,
-                CropAspectRatioPreset.ratio16x9
               ],
             ),
             IOSUiSettings(
               title: 'Crop Foto Produk',
               aspectRatioPresets: [
                 CropAspectRatioPreset.square,
-                CropAspectRatioPreset.ratio3x2,
-                CropAspectRatioPreset.original,
-                CropAspectRatioPreset.ratio4x3,
-                CropAspectRatioPreset.ratio16x9
               ],
             ),
           ],
