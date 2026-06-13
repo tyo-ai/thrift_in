@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
+import '../services/app_prefetch_service.dart';
 import '../services/user_service.dart';
+import 'main_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,8 +19,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  final _userService = UserService();
+  StreamSubscription<AuthState>? _authSubscription;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _isGoogleLoading = false;
 
   // Colors
   static const Color surfaceContainerLow = AppColors.scaffoldBackground;
@@ -29,12 +37,84 @@ class _RegisterScreenState extends State<RegisterScreen> {
   static const Color surfaceContainerLowest = AppColors.surface;
 
   @override
+  void initState() {
+    super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) {
+      if (data.session != null) {
+        _finishGoogleSignIn();
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _authSubscription?.cancel();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
+  }
+
+  Future<void> _finishGoogleSignIn() async {
+    if (_isGoogleLoading) return;
+
+    setState(() => _isGoogleLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    try {
+      final user = await _userService.syncSupabaseAuthUser();
+      if (user == null) return;
+
+      try {
+        await AppPrefetchService.instance.warmAfterLogin();
+      } catch (_) {
+        AppPrefetchService.instance.warmBackground();
+      }
+
+      if (!mounted) return;
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainScreen()),
+        (_) => false,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Daftar dengan Google belum berhasil')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
+    }
+  }
+
+  Future<void> _startGoogleSignIn() async {
+    if (_isGoogleLoading) return;
+
+    setState(() => _isGoogleLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final opened = await _userService.signInWithGoogle();
+      if (!opened && mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Tidak bisa membuka login Google')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Login Google gagal dibuka')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
+    }
   }
 
   InputDecoration _inputDecoration(
@@ -519,13 +599,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {},
-                icon: Image.asset(
-                  'assets/icons/google_logo.png',
-                  width: 18,
-                  height: 18,
-                ),
-                label: const Text('Google'),
+                onPressed: _isGoogleLoading ? null : _startGoogleSignIn,
+                icon: _isGoogleLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Image.asset(
+                        'assets/icons/google_logo.png',
+                        width: 18,
+                        height: 18,
+                      ),
+                label: Text(_isGoogleLoading ? 'Membuka...' : 'Google'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: onSurface,
                   side: const BorderSide(color: outlineVariant),

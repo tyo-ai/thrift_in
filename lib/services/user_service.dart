@@ -8,6 +8,7 @@ import 'supabase_config.dart';
 
 class UserService {
   static Map<String, dynamic>? currentUser;
+  static const googleRedirectUrl = 'thriftin://login-callback';
   static const Duration _userCacheTtl = Duration(minutes: 5);
   static final Map<int, _UserCacheEntry> _userCache = {};
 
@@ -59,7 +60,10 @@ class UserService {
   Future<bool> loadSession() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('session_user_id');
-    if (userId == null) return false;
+    if (userId == null) {
+      final oauthUser = await syncSupabaseAuthUser();
+      return oauthUser != null;
+    }
 
     final user = await _getUserById(userId);
     if (user != null) {
@@ -70,6 +74,78 @@ class UserService {
 
     await _clearSession();
     return false;
+  }
+
+  Future<bool> signInWithGoogle() async {
+    return SupabaseConfig.client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: googleRedirectUrl,
+      authScreenLaunchMode: LaunchMode.externalApplication,
+    );
+  }
+
+  Future<Map<String, dynamic>?> syncSupabaseAuthUser() async {
+    final authUser = SupabaseConfig.client.auth.currentUser;
+    final email = authUser?.email?.trim().toLowerCase();
+    if (authUser == null || email == null || email.isEmpty) {
+      return null;
+    }
+
+    final metadata = authUser.userMetadata ?? <String, dynamic>{};
+    final displayName =
+        (metadata['full_name'] ?? metadata['name'] ?? email.split('@').first)
+            .toString()
+            .trim();
+    final avatarUrl = (metadata['avatar_url'] ?? metadata['picture'])
+        ?.toString()
+        .trim();
+
+    final existing = await SupabaseConfig.client
+        .from('users')
+        .select()
+        .eq('email', email)
+        .maybeSingle();
+
+    Map<String, dynamic> user;
+    if (existing == null) {
+      final created = await SupabaseConfig.client
+          .from('users')
+          .insert({
+            'name': displayName.isEmpty ? 'Pengguna ThriftIn' : displayName,
+            'email': email,
+            'password': _hashPassword('google:${authUser.id}'),
+            'photo_path': avatarUrl?.isEmpty == false ? avatarUrl : null,
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+      user = Map<String, dynamic>.from(created);
+    } else {
+      user = Map<String, dynamic>.from(existing);
+      final updates = <String, dynamic>{};
+      final currentPhoto = user['photo_path']?.toString().trim() ?? '';
+      if (currentPhoto.isEmpty && avatarUrl != null && avatarUrl.isNotEmpty) {
+        updates['photo_path'] = avatarUrl;
+      }
+      if ((user['name']?.toString().trim() ?? '').isEmpty &&
+          displayName.isNotEmpty) {
+        updates['name'] = displayName;
+      }
+      if (updates.isNotEmpty) {
+        final updated = await SupabaseConfig.client
+            .from('users')
+            .update(updates)
+            .eq('id', user['id'])
+            .select()
+            .single();
+        user = Map<String, dynamic>.from(updated);
+      }
+    }
+
+    currentUser = user;
+    _userCache[user['id'] as int] = _UserCacheEntry(user);
+    await _saveSession(user);
+    return user;
   }
 
   Future<int> registerUser({
@@ -244,6 +320,11 @@ class UserService {
   Future<void> logout() async {
     currentUser = null;
     _userCache.clear();
+    try {
+      await SupabaseConfig.client.auth.signOut();
+    } catch (_) {
+      // Local logout should still continue if the OAuth session is unavailable.
+    }
     await _clearSession();
   }
 }
