@@ -16,17 +16,19 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _userService = UserService();
   StreamSubscription<AuthState>? _authSubscription;
   bool _obscurePassword = true;
-  bool _isGoogleLoading = false;
+  bool _isOpeningGoogle = false;
+  bool _isCompletingGoogle = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
       data,
     ) {
@@ -38,16 +40,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _finishGoogleSignIn() async {
-    if (_isGoogleLoading) return;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        Supabase.instance.client.auth.currentSession != null) {
+      _finishGoogleSignIn();
+    }
+  }
 
-    setState(() => _isGoogleLoading = true);
+  Future<void> _finishGoogleSignIn() async {
+    if (_isCompletingGoogle) return;
+
+    setState(() => _isCompletingGoogle = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
@@ -66,22 +77,22 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const MainScreen()),
         (_) => false,
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Login Google belum berhasil')),
+        SnackBar(content: Text('Login Google belum berhasil: $error')),
       );
     } finally {
       if (mounted) {
-        setState(() => _isGoogleLoading = false);
+        setState(() => _isCompletingGoogle = false);
       }
     }
   }
 
   Future<void> _startGoogleSignIn() async {
-    if (_isGoogleLoading) return;
+    if (_isOpeningGoogle || _isCompletingGoogle) return;
 
-    setState(() => _isGoogleLoading = true);
+    setState(() => _isOpeningGoogle = true);
     final messenger = ScaffoldMessenger.of(context);
 
     try {
@@ -98,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() => _isGoogleLoading = false);
+        setState(() => _isOpeningGoogle = false);
       }
     }
   }
@@ -388,8 +399,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _isGoogleLoading ? null : _startGoogleSignIn,
-                      icon: _isGoogleLoading
+                      onPressed: _isOpeningGoogle || _isCompletingGoogle
+                          ? null
+                          : _startGoogleSignIn,
+                      icon: _isOpeningGoogle || _isCompletingGoogle
                           ? const SizedBox(
                               width: 18,
                               height: 18,
@@ -400,7 +413,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 18,
                               height: 18,
                             ),
-                      label: Text(_isGoogleLoading ? 'Membuka...' : 'Google'),
+                      label: Text(
+                        _isCompletingGoogle
+                            ? 'Masuk...'
+                            : (_isOpeningGoogle ? 'Membuka...' : 'Google'),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textPrimary,
                         side: BorderSide(color: AppColors.border),
