@@ -102,10 +102,13 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           const SnackBar(content: Text('Tidak bisa membuka login Google')),
         );
       }
-    } catch (_) {
+      if (Supabase.instance.client.auth.currentSession != null) {
+        await _finishGoogleSignIn();
+      }
+    } catch (error) {
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Login Google gagal dibuka')),
+        SnackBar(content: Text('Login Google gagal: $error')),
       );
     } finally {
       if (mounted) {

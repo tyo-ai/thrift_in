@@ -2,15 +2,22 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_config.dart';
 
 class UserService {
   static Map<String, dynamic>? currentUser;
+  static const googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue:
+        '152645975944-8lnfr5lhijp59640d7bd19edkbfs47ic.apps.googleusercontent.com',
+  );
   static const googleRedirectUrl = 'thriftin://login-callback';
   static const Duration _userCacheTtl = Duration(minutes: 5);
   static final Map<int, _UserCacheEntry> _userCache = {};
+  static bool _googleSignInReady = false;
 
   static int? get currentUserId => currentUser?['id'] as int?;
 
@@ -77,10 +84,45 @@ class UserService {
   }
 
   Future<bool> signInWithGoogle() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      await _signInWithNativeGoogle();
+      return true;
+    }
+
     return SupabaseConfig.client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: googleRedirectUrl,
       authScreenLaunchMode: LaunchMode.externalApplication,
+    );
+  }
+
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (_googleSignInReady) return;
+
+    await GoogleSignIn.instance.initialize(serverClientId: googleWebClientId);
+    _googleSignInReady = true;
+  }
+
+  Future<void> _signInWithNativeGoogle() async {
+    await _ensureGoogleSignInInitialized();
+
+    final account = await GoogleSignIn.instance.authenticate();
+    final authentication = account.authentication;
+    final idToken = authentication.idToken;
+    if (idToken == null) {
+      throw Exception('Google tidak mengembalikan ID token');
+    }
+
+    final authorization =
+        await account.authorizationClient.authorizationForScopes(
+          const <String>[],
+        ) ??
+        await account.authorizationClient.authorizeScopes(const <String>[]);
+
+    await SupabaseConfig.client.auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      accessToken: authorization.accessToken,
     );
   }
 
