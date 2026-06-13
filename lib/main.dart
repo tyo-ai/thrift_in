@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/forgot_password_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/my_orders_screen.dart';
@@ -31,7 +32,8 @@ void main() async {
 }
 
 class ThriftinApp extends StatelessWidget {
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   const ThriftinApp({super.key});
 
@@ -72,6 +74,7 @@ class ThriftinApp extends StatelessWidget {
         '/splash': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/home': (context) => const MainScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/orders': (context) => const MyOrdersScreen(),

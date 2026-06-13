@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../services/app_prefetch_service.dart';
 import '../services/user_service.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 import 'main_screen.dart';
 
@@ -133,7 +134,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
                     child: Text(
                       'Lupa kata sandi?',
                       style: TextStyle(

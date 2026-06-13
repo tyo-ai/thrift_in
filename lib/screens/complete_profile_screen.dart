@@ -229,8 +229,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     final gender = _selectedGender;
     final birthDate = _selectedBirthDate?.toIso8601String();
 
-    if (userId != null) {
-      setState(() => _isSaving = true);
+    if (userId == null || _isSaving) return;
+
+    setState(() => _isSaving = true);
+    try {
       await UserService().updateBioAndPhoto(
         userId,
         bio,
@@ -241,11 +243,20 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         gender: gender,
         birthDate: birthDate,
       );
+
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (error) {
+      debugPrint('Profile save failed: $error');
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan profil: $error'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
-
-    if (!mounted) return;
-
-    Navigator.pop(context);
   }
 
   @override
@@ -506,51 +517,51 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 children: ['Laki-laki', 'Perempuan', 'Lainnya'].map((gender) {
                   final isSelected = _selectedGender == gender;
                   return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedGender = gender;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 10,
+                    onTap: () {
+                      setState(() {
+                        _selectedGender = gender;
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.white,
+                        borderRadius: BorderRadius.circular(99),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.border,
+                          width: 1,
                         ),
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : Colors.white,
-                          borderRadius: BorderRadius.circular(99),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.border,
-                            width: 1,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.25,
-                                    ),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.25,
                                   ),
-                                ]
-                              : [],
-                        ),
-                        child: Text(
-                          gender,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            color: isSelected
-                                ? Colors.white
-                                : AppColors.textSecondary,
-                          ),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                            : [],
+                      ),
+                      child: Text(
+                        gender,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isSelected
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textSecondary,
                         ),
                       ),
+                    ),
                   );
                 }).toList(),
               ),

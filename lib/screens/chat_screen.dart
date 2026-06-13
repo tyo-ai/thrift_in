@@ -205,9 +205,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) setState(() => _selectedImage = picked);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal memilih gambar')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gagal memilih gambar')));
     }
   }
 
@@ -235,9 +235,9 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (error) {
       debugPrint('Chat image send failed: $error');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal mengirim gambar')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gagal mengirim gambar')));
     } finally {
       if (mounted) {
         setState(() {
@@ -490,7 +490,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemBuilder: (context, index) {
                       final msg = _messages[index];
                       final isMine =
-                           msg['sender_id'] == UserService.currentUserId;
+                          msg['sender_id'] == UserService.currentUserId;
                       final offerAmount = msg['offer_amount'];
                       Widget messageWidget;
                       if (offerAmount != null) {
@@ -966,9 +966,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
   void initState() {
     super.initState();
     _loadChats();
-    _messageSubscription = ChatNotificationService.instance.messageStream.listen((message) {
-      _loadChats(forceRefresh: true);
-    });
+    _messageSubscription = ChatNotificationService.instance.messageStream
+        .listen((message) {
+          _loadChats(forceRefresh: true);
+        });
   }
 
   @override

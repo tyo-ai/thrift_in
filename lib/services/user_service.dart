@@ -181,20 +181,25 @@ class UserService {
     required File imageFile,
   }) async {
     final extension = imageFile.path.split('.').last.toLowerCase();
-    final safeExtension = extension.isEmpty ? 'jpg' : extension;
+    final safeExtension = extension.isEmpty || extension.length > 5
+        ? 'jpg'
+        : extension;
+    final contentType = switch (safeExtension) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'image/jpeg',
+    };
     final objectPath =
         '$userId/${DateTime.now().microsecondsSinceEpoch}.$safeExtension';
 
     await SupabaseConfig.client.storage
         .from('profile-photos')
-        .upload(
+        .uploadBinary(
           objectPath,
-          imageFile,
-          fileOptions: FileOptions(
-            upsert: true,
-            contentType: safeExtension == 'png' ? 'image/png' : 'image/jpeg',
-          ),
-        );
+          await imageFile.readAsBytes(),
+          fileOptions: FileOptions(upsert: true, contentType: contentType),
+        )
+        .timeout(const Duration(seconds: 25));
 
     return SupabaseConfig.client.storage
         .from('profile-photos')

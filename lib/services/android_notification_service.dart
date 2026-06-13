@@ -107,7 +107,7 @@ class AndroidNotificationService {
       playSound: true,
       enableVibration: true,
       color: Color(0xFF159A5B),
-      subText: 'Chat Thriftin',
+      subText: 'ThriftIn',
     );
     const darwinDetails = DarwinNotificationDetails();
     const details = NotificationDetails(
@@ -118,7 +118,7 @@ class AndroidNotificationService {
 
     await _plugin.show(
       id: roomId,
-      title: 'Pesan dari $trimmedSenderName',
+      title: trimmedSenderName,
       body: notificationMessage,
       notificationDetails: details,
       payload: 'chat:$roomId',
