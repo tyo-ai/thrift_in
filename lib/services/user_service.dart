@@ -8,7 +8,7 @@ import 'supabase_config.dart';
 
 class UserService {
   static Map<String, dynamic>? currentUser;
-  static const googleRedirectUrl = 'thriftin://login-callback/';
+  static const googleRedirectUrl = 'thriftin://login-callback';
   static const Duration _userCacheTtl = Duration(minutes: 5);
   static final Map<int, _UserCacheEntry> _userCache = {};
 
