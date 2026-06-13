@@ -93,7 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (userId == null) return;
 
     try {
-      final favorites = await ProductService().getFavoriteProducts(forceRefresh: true);
+      final favorites = await ProductService().getFavoriteProducts(
+        forceRefresh: true,
+      );
       final favoriteIds = favorites
           .map((p) => int.tryParse(p['id']?.toString() ?? ''))
           .whereType<int>()
@@ -668,10 +670,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           Stack(
             children: [
-              AspectRatio(
-                aspectRatio: 1,
-                child: _buildProductImage(imageUrl),
-              ),
+              AspectRatio(aspectRatio: 1, child: _buildProductImage(imageUrl)),
               Positioned(
                 top: 8,
                 right: 8,
@@ -698,7 +697,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 left: 8,
                 bottom: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isBid
                         ? const Color(0xFFFFB21A)
@@ -833,96 +835,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildReviews() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildReviewCard(
-          name: 'Raka',
-          review: 'Barangnya bagus, pengiriman cepat, seller ramah.',
-          rating: '5.0',
-        ),
-        _buildReviewCard(
-          name: 'Nadia',
-          review: 'Produk sesuai foto dan kondisi masih oke.',
-          rating: '4.8',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReviewCard({
-    required String name,
-    required String review,
-    required String rating,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: const Color(0xFFE7EEF6)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFFEAF8F6),
-            child: Text(
-              name[0],
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  review,
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 1.35,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            children: [
-              const Icon(
-                Icons.star_rounded,
-                color: Color(0xFFFFB800),
-                size: 15,
-              ),
-              const SizedBox(width: 2),
-              Text(
-                rating,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+    return _buildPlaceholder('Belum ada ulasan');
   }
 
   Widget _buildPlaceholder(String message) {
