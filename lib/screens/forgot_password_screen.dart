@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/password_reset_service.dart';
@@ -17,13 +19,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _confirmController = TextEditingController();
   final PasswordResetService _resetService = PasswordResetService();
 
+  Timer? _resendTimer;
   bool _otpSent = false;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  int _resendSeconds = 0;
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _emailController.dispose();
     _otpController.dispose();
     _passwordController.dispose();
@@ -42,8 +47,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       await _resetService.requestOtp(email);
       if (!mounted) return;
-      setState(() => _otpSent = true);
-      _showMessage('Jika email terdaftar, OTP sudah dikirim.');
+      setState(() {
+        _otpSent = true;
+        _otpController.clear();
+      });
+      _startResendCooldown();
+      _showMessage('Kode OTP sudah dikirim ke email.');
     } catch (error) {
       if (!mounted) return;
       _showMessage('Gagal mengirim OTP: $error', isError: true);
@@ -89,6 +98,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
+  void _startResendCooldown() {
+    _resendTimer?.cancel();
+    setState(() => _resendSeconds = 45);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_resendSeconds <= 1) {
+        timer.cancel();
+        setState(() => _resendSeconds = 0);
+      } else {
+        setState(() => _resendSeconds--);
+      }
+    });
+  }
+
+  void _editEmail() {
+    _resendTimer?.cancel();
+    setState(() {
+      _otpSent = false;
+      _resendSeconds = 0;
+      _otpController.clear();
+      _passwordController.clear();
+      _confirmController.clear();
+    });
+  }
+
   void _showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -109,25 +146,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Reset kata sandi',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _otpSent
-                    ? 'Masukkan OTP dari email dan buat password baru.'
-                    : 'Masukkan email akunmu untuk menerima kode OTP.',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  height: 1.4,
-                ),
-              ),
+              _buildHeader(),
               const SizedBox(height: 28),
               _buildTextField(
                 controller: _emailController,
@@ -138,6 +157,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 keyboardType: TextInputType.emailAddress,
               ),
               if (_otpSent) ...[
+                const SizedBox(height: 16),
+                _buildOtpNotice(),
                 const SizedBox(height: 16),
                 _buildTextField(
                   controller: _otpController,
@@ -201,29 +222,165 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.4,
-                          ),
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.3,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              _otpSent ? 'Memproses...' : 'Mengirim kode...',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         )
-                      : Text(_otpSent ? 'Ubah Password' : 'Kirim OTP'),
+                      : Text(
+                          _otpSent ? 'Ubah Password' : 'Kirim OTP',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                 ),
               ),
               if (_otpSent) ...[
                 const SizedBox(height: 12),
                 Center(
                   child: TextButton(
-                    onPressed: _isLoading ? null : _sendOtp,
-                    child: const Text('Kirim ulang OTP'),
+                    onPressed: _isLoading || _resendSeconds > 0
+                        ? null
+                        : _sendOtp,
+                    child: Text(
+                      _resendSeconds > 0
+                          ? 'Kirim ulang dalam $_resendSeconds detik'
+                          : 'Kirim ulang OTP',
+                    ),
                   ),
                 ),
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(
+            _otpSent ? Icons.mark_email_read_outlined : Icons.lock_reset,
+            color: AppColors.primary,
+            size: 28,
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          _otpSent ? 'Cek email kamu' : 'Reset kata sandi',
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _otpSent
+              ? 'Kami mengirim kode 6 digit untuk verifikasi akun.'
+              : 'Masukkan email akunmu, nanti kami kirim kode OTP untuk membuat password baru.',
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppColors.textSecondary,
+            height: 1.45,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOtpNotice() {
+    final email = _emailController.text.trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primarySurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.mail_outline,
+              color: AppColors.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  email,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Kode berlaku 10 menit. Cek juga folder spam kalau email belum masuk.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _isLoading ? null : _editEmail,
+                  borderRadius: BorderRadius.circular(6),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'Ganti email',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
