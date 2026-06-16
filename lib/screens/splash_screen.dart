@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _introController;
   late final AnimationController _pulseController;
   late final AnimationController _progressController;
-  
+
   late final Animation<double> _logoScale;
   late final Animation<double> _logoOpacity;
   late final Animation<double> _textOpacity;
@@ -98,7 +98,15 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateToNext() async {
-    final isLoggedIn = await UserService().loadSession();
+    var isLoggedIn = false;
+    try {
+      isLoggedIn = await UserService().loadSession().timeout(
+        const Duration(seconds: 5),
+      );
+    } catch (error) {
+      debugPrint('Splash session check skipped: $error');
+    }
+
     if (isLoggedIn) {
       try {
         await AppPrefetchService.instance.warmCritical();
@@ -244,10 +252,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(2),
                                   gradient: const LinearGradient(
-                                    colors: [
-                                      Colors.white,
-                                      Color(0xFFE8F5E9),
-                                    ],
+                                    colors: [Colors.white, Color(0xFFE8F5E9)],
                                   ),
                                 ),
                               ),
@@ -295,10 +300,7 @@ class SplashBackgroundPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          darkColor,
-          primaryColor,
-        ],
+        colors: [darkColor, primaryColor],
       ).createShader(rect);
     canvas.drawRect(rect, paint);
 
@@ -310,35 +312,41 @@ class SplashBackgroundPainter extends CustomPainter {
 
     wavePaint.color = primaryColor.withValues(alpha: 0.25);
     final Path topPath = Path();
-    topPath.addOval(Rect.fromCircle(
-      center: Offset(
-        size.width * 0.8 + math.sin(animationValue * math.pi) * 20,
-        size.height * 0.15 - offset * 0.2,
+    topPath.addOval(
+      Rect.fromCircle(
+        center: Offset(
+          size.width * 0.8 + math.sin(animationValue * math.pi) * 20,
+          size.height * 0.15 - offset * 0.2,
+        ),
+        radius: size.width * 0.55,
       ),
-      radius: size.width * 0.55,
-    ));
+    );
     canvas.drawPath(topPath, wavePaint);
 
     wavePaint.color = darkColor.withValues(alpha: 0.45);
     final Path bottomPath = Path();
-    bottomPath.addOval(Rect.fromCircle(
-      center: Offset(
-        size.width * 0.1 - math.cos(animationValue * math.pi) * 20,
-        size.height * 0.85 + offset * 0.3,
+    bottomPath.addOval(
+      Rect.fromCircle(
+        center: Offset(
+          size.width * 0.1 - math.cos(animationValue * math.pi) * 20,
+          size.height * 0.85 + offset * 0.3,
+        ),
+        radius: size.width * 0.65,
       ),
-      radius: size.width * 0.65,
-    ));
+    );
     canvas.drawPath(bottomPath, wavePaint);
 
     wavePaint.color = const Color(0xFF26A69A).withValues(alpha: 0.15);
     final Path middlePath = Path();
-    middlePath.addOval(Rect.fromCircle(
-      center: Offset(
-        size.width * 0.5,
-        size.height * 0.5 + math.sin(animationValue * 2 * math.pi) * 15,
+    middlePath.addOval(
+      Rect.fromCircle(
+        center: Offset(
+          size.width * 0.5,
+          size.height * 0.5 + math.sin(animationValue * 2 * math.pi) * 15,
+        ),
+        radius: size.width * 0.45,
       ),
-      radius: size.width * 0.45,
-    ));
+    );
     canvas.drawPath(middlePath, wavePaint);
   }
 

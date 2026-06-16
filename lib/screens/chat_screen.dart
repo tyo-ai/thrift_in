@@ -37,6 +37,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isSendingImage = false;
   XFile? _selectedImage;
   RealtimeChannel? _roomRealtimeChannel;
+  Timer? _markReadDebounce;
 
   Map<String, dynamic> get _product {
     final roomProduct = _room?['products'];
@@ -100,12 +101,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final roomId = int.tryParse(_room?['id']?.toString() ?? '');
       if (roomId != null) {
         ChatScreen.activeRoomId = roomId;
-        await _chatService.markRoomAsRead(
-          roomId: roomId,
-          userId: currentUserId,
-        );
-
         await _loadMessages();
+        _markRoomAsReadSoon(roomId, currentUserId);
         _subscribeToRoomMessages(roomId, currentUserId);
         return;
       }
@@ -153,13 +150,10 @@ class _ChatScreenState extends State<ChatScreen> {
               column: 'room_id',
               value: roomId,
             ),
-            callback: (_) async {
+            callback: (payload) {
               if (!mounted) return;
-              await _chatService.markRoomAsRead(
-                roomId: roomId,
-                userId: currentUserId,
-              );
-              await _loadMessages();
+              _applyRealtimeMessage(payload.newRecord, roomId);
+              _markRoomAsReadSoon(roomId, currentUserId);
             },
           )
           .subscribe((status, error) {
@@ -189,7 +183,6 @@ class _ChatScreenState extends State<ChatScreen> {
       senderId: senderId,
       message: message,
     );
-    await _loadMessages();
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -231,7 +224,6 @@ class _ChatScreenState extends State<ChatScreen> {
         senderId: senderId,
         message: '${ChatService.imageMessagePrefix}$imageUrl',
       );
-      await _loadMessages();
     } catch (error) {
       debugPrint('Chat image send failed: $error');
       if (!mounted) return;
@@ -288,6 +280,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _markReadDebounce?.cancel();
     final roomId = int.tryParse(_room?['id']?.toString() ?? '');
     if (roomId != null && ChatScreen.activeRoomId == roomId) {
       ChatScreen.activeRoomId = null;
@@ -310,6 +303,41 @@ class _ChatScreenState extends State<ChatScreen> {
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOut,
       );
+    });
+  }
+
+  void _applyRealtimeMessage(Map<String, dynamic> record, int roomId) {
+    final messageRoomId = int.tryParse(record['room_id']?.toString() ?? '');
+    final messageId = int.tryParse(record['id']?.toString() ?? '');
+    if (messageRoomId != roomId || messageId == null) return;
+
+    final message = Map<String, dynamic>.from(record);
+    final existingIndex = _messages.indexWhere(
+      (item) => item['id']?.toString() == messageId.toString(),
+    );
+
+    setState(() {
+      if (existingIndex >= 0) {
+        _messages[existingIndex] = message;
+      } else {
+        _messages = [..._messages, message]..sort(_compareMessagesByTime);
+      }
+      _isLoading = false;
+    });
+    _scrollToBottom();
+  }
+
+  void _markRoomAsReadSoon(int roomId, int currentUserId) {
+    _markReadDebounce?.cancel();
+    _markReadDebounce = Timer(const Duration(milliseconds: 350), () async {
+      try {
+        await _chatService.markRoomAsRead(
+          roomId: roomId,
+          userId: currentUserId,
+        );
+      } catch (error) {
+        debugPrint('Chat mark read failed: $error');
+      }
     });
   }
 

@@ -23,6 +23,12 @@ class NotificationService {
       'description': description,
       'isUnread': 1,
     });
+    await _sendPushNotification(
+      userId: userId,
+      title: title,
+      body: description,
+      payload: {'type': 'notification'},
+    );
     _cache.remove(userId);
   }
 
@@ -64,6 +70,27 @@ class NotificationService {
   }
 
   static void clearCache() => _cache.clear();
+
+  Future<void> _sendPushNotification({
+    required int userId,
+    required String title,
+    required String body,
+    required Map<String, String> payload,
+  }) async {
+    try {
+      await SupabaseConfig.client.functions.invoke(
+        'send-fcm',
+        body: {
+          'userId': userId,
+          'title': title,
+          'body': body,
+          'payload': payload,
+        },
+      );
+    } catch (_) {
+      // Push is best-effort; the notification row remains the source of truth.
+    }
+  }
 
   List<Map<String, dynamic>> _cloneList(List<Map<String, dynamic>> items) {
     return items.map((item) => Map<String, dynamic>.from(item)).toList();

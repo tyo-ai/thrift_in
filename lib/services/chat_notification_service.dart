@@ -17,7 +17,7 @@ class ChatNotificationService {
   Set<int> _roomIds = {};
   final ChatService _chatService = ChatService();
   VoidCallback? _onNewMessage;
-  
+
   final StreamController<Map<String, dynamic>> _messageController =
       StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
@@ -101,9 +101,6 @@ class ChatNotificationService {
       'Chat notifications: incoming message from $senderName in room $roomId.',
     );
 
-    // Trigger live badge update on main nav
-    _onNewMessage?.call();
-
     // Trigger stream for active chat screens to refresh in real-time
     _messageController.add(record);
 
@@ -111,6 +108,9 @@ class ChatNotificationService {
       debugPrint('Chat notifications: skipped active room $roomId.');
       return;
     }
+
+    // Trigger live badge update on main nav only when the room is not open.
+    _onNewMessage?.call();
 
     await AndroidNotificationService.instance.showChatNotification(
       roomId: roomId,
@@ -131,10 +131,7 @@ class ChatNotificationService {
   }
 
   Future<Map<String, dynamic>?> _findRoom(int userId, int roomId) async {
-    final rooms = await _chatService.getRoomsForUser(
-      userId,
-      forceRefresh: true,
-    );
+    final rooms = await _chatService.getRoomsForUser(userId);
     for (final room in rooms) {
       if (room['id']?.toString() == roomId.toString()) return room;
     }

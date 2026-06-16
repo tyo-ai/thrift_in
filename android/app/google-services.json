@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "282487530535",
+    "project_id": "thriftin-28b93",
+    "storage_bucket": "thriftin-28b93.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:282487530535:android:b5a3edd38fdfe277991a02",
+        "android_client_info": {
+          "package_name": "com.example.thrift_in"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8uLR06Nep9WtbyGAmt1f_LvwqEYkBel4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

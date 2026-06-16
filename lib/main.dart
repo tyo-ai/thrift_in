@@ -18,7 +18,11 @@ import 'services/supabase_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseConfig.initialize();
+  try {
+    await SupabaseConfig.initialize().timeout(const Duration(seconds: 5));
+  } catch (error) {
+    debugPrint('Startup Supabase init skipped: $error');
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

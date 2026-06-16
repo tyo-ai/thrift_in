@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'firebase_notification_service.dart';
 import 'supabase_config.dart';
 
 class UserService {
@@ -35,6 +38,13 @@ class UserService {
     await prefs.setInt('session_user_id', user['id'] as int);
     await prefs.setString('session_email', user['email'] as String);
     await prefs.setString('session_name', user['name'] as String);
+    unawaited(
+      FirebaseNotificationService.instance
+          .registerCurrentDevice(user['id'] as int)
+          .catchError((error) {
+            debugPrint('FCM registration skipped after login: $error');
+          }),
+    );
   }
 
   Future<void> _clearSession() async {
@@ -77,6 +87,7 @@ class UserService {
     if (user != null) {
       currentUser = user;
       _userCache[userId] = _UserCacheEntry(user);
+      _registerFcmToken(userId);
       return true;
     }
 
@@ -250,6 +261,16 @@ class UserService {
     return currentUser;
   }
 
+  void _registerFcmToken(int userId) {
+    unawaited(
+      FirebaseNotificationService.instance
+          .registerCurrentDevice(userId)
+          .catchError((error) {
+            debugPrint('FCM registration skipped: $error');
+          }),
+    );
+  }
+
   Future<int> updateProfile(
     int userId,
     String name,
@@ -371,6 +392,14 @@ class UserService {
   }
 
   Future<void> logout() async {
+    final userId = currentUserId;
+    unawaited(
+      FirebaseNotificationService.instance
+          .removeCurrentDeviceToken(userId: userId)
+          .catchError((error) {
+            debugPrint('FCM token cleanup skipped during logout: $error');
+          }),
+    );
     currentUser = null;
     _userCache.clear();
     try {

@@ -134,11 +134,13 @@ class ChatService {
 
     await SupabaseConfig.client
         .from('chat_rooms')
-        .update({
-          'last_message': preview,
-          'last_message_at': now,
-        })
+        .update({'last_message': preview, 'last_message_at': now})
         .eq('id', roomId);
+    await _sendChatPushNotification(
+      roomId: roomId,
+      senderId: senderId,
+      message: preview,
+    );
     _roomsCache.clear();
   }
 
@@ -200,10 +202,7 @@ class ChatService {
         .uploadBinary(
           objectPath,
           bytes,
-          fileOptions: FileOptions(
-            upsert: true,
-            contentType: contentType,
-          ),
+          fileOptions: FileOptions(upsert: true, contentType: contentType),
         );
 
     return SupabaseConfig.client.storage
@@ -248,6 +247,45 @@ class ChatService {
     _roomsCache.clear();
   }
 
+  Future<void> _sendChatPushNotification({
+    required int roomId,
+    required int senderId,
+    required String message,
+  }) async {
+    try {
+      final room = await SupabaseConfig.client
+          .from('chat_rooms')
+          .select(
+            'buyer_id, seller_id, buyer:users!chat_rooms_buyer_id_fkey(name), seller:users!chat_rooms_seller_id_fkey(name)',
+          )
+          .eq('id', roomId)
+          .maybeSingle();
+      if (room == null) return;
+
+      final buyerId = int.tryParse(room['buyer_id']?.toString() ?? '');
+      final sellerId = int.tryParse(room['seller_id']?.toString() ?? '');
+      final recipientId = senderId == buyerId ? sellerId : buyerId;
+      if (recipientId == null || recipientId == senderId) return;
+
+      final sender = senderId == buyerId ? room['buyer'] : room['seller'];
+      final senderName = sender is Map
+          ? sender['name']?.toString().trim() ?? 'User ThriftIn'
+          : 'User ThriftIn';
+
+      await SupabaseConfig.client.functions.invoke(
+        'send-fcm',
+        body: {
+          'userId': recipientId,
+          'title': senderName.isEmpty ? 'Pesan baru' : senderName,
+          'body': message,
+          'payload': {'type': 'chat', 'roomId': roomId.toString()},
+        },
+      );
+    } catch (_) {
+      // Realtime chat remains usable even if push delivery fails.
+    }
+  }
+
   Future<void> deleteMessage({
     required int roomId,
     required int messageId,
@@ -276,7 +314,8 @@ class ChatService {
               ? 'Mulai percakapan'
               : previewText(latest['message']?.toString() ?? ''),
           'last_message_at':
-              latest?['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+              latest?['created_at']?.toString() ??
+              DateTime.now().toIso8601String(),
         })
         .eq('id', roomId);
     _roomsCache.clear();

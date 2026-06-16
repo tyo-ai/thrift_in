@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   final _userService = UserService();
   StreamSubscription<AuthState>? _authSubscription;
   bool _obscurePassword = true;
+  bool _isLoggingIn = false;
   bool _isOpeningGoogle = false;
   bool _isCompletingGoogle = false;
 
@@ -63,20 +64,17 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     final navigator = Navigator.of(context);
 
     try {
-      final user = await _userService.syncSupabaseAuthUser();
+      final user = await _userService.syncSupabaseAuthUser().timeout(
+        const Duration(seconds: 10),
+      );
       if (user == null) return;
-
-      try {
-        await AppPrefetchService.instance.warmAfterLogin();
-      } catch (_) {
-        AppPrefetchService.instance.warmBackground();
-      }
 
       if (!mounted) return;
       navigator.pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const MainScreen()),
         (_) => false,
       );
+      AppPrefetchService.instance.warmBackground();
     } catch (error) {
       if (!mounted) return;
       messenger.showSnackBar(
@@ -299,6 +297,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () async {
+                    if (_isLoggingIn) return;
                     final email = _emailController.text.trim();
                     final password = _passwordController.text.trim();
 
@@ -314,23 +313,36 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                     final messenger = ScaffoldMessenger.of(context);
                     final navigator = Navigator.of(context);
 
-                    final user = await UserService().loginUser(email, password);
-                    if (user != null) {
-                      try {
-                        await AppPrefetchService.instance.warmAfterLogin();
-                      } catch (_) {
-                        AppPrefetchService.instance.warmBackground();
-                      }
+                    setState(() => _isLoggingIn = true);
+                    try {
+                      final user = await UserService()
+                          .loginUser(email, password)
+                          .timeout(const Duration(seconds: 10));
                       if (!mounted) return;
-                      navigator.pushReplacement(
-                        MaterialPageRoute(builder: (_) => const MainScreen()),
-                      );
-                    } else {
+
+                      if (user != null) {
+                        navigator.pushReplacement(
+                          MaterialPageRoute(builder: (_) => const MainScreen()),
+                        );
+                        AppPrefetchService.instance.warmBackground();
+                      } else {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Email atau kata sandi salah'),
+                          ),
+                        );
+                      }
+                    } catch (error) {
+                      if (!mounted) return;
                       messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('Email atau kata sandi salah'),
+                        SnackBar(
+                          content: Text(
+                            'Login gagal atau terlalu lama: $error',
+                          ),
                         ),
                       );
+                    } finally {
+                      if (mounted) setState(() => _isLoggingIn = false);
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -345,7 +357,16 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: const Text('Masuk'),
+                  child: _isLoggingIn
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Masuk'),
                 ),
               ),
               const SizedBox(height: 20),
