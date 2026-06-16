@@ -49,6 +49,18 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     }
   }
 
+  String? _getPaymentMethodLogoAsset(String name) {
+    final lowerName = name.toLowerCase();
+    if (lowerName.contains('bca')) return 'assets/icons/bca_logo.png';
+    if (lowerName.contains('bri')) return 'assets/icons/bri_logo.png';
+    if (lowerName.contains('bni')) return 'assets/icons/bni_logo.png';
+    if (lowerName.contains('mandiri')) return 'assets/icons/mandiri_logo.png';
+    if (lowerName.contains('cod')) return 'assets/icons/cod_logo.png';
+    if (lowerName.contains('gopay')) return 'assets/icons/gopay_logo.png';
+    if (lowerName.contains('dana')) return 'assets/icons/dana_logo.png';
+    return null;
+  }
+
   Future<void> _setDefaultMethod(int methodId) async {
     try {
       final userId = UserService.currentUserId;
@@ -243,6 +255,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     final number = method['account_number'] as String;
     final isDefault =
         (method['is_default'] == 1 || method['is_default'] == true);
+    final logoAsset = _getPaymentMethodLogoAsset(name);
 
     // Branded card styling
     Color cardColor;
@@ -255,6 +268,15 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     } else if (name.toLowerCase().contains('dana')) {
       cardColor = const Color(0xFF1976D2); // DANA Blue
       gradients = [const Color(0xFF0D47A1), const Color(0xFF1976D2)];
+    } else if (name.toLowerCase().contains('bri')) {
+      cardColor = const Color(0xFF0056A2); // BRI blue
+      gradients = [const Color(0xFF003F75), const Color(0xFF0056A2)];
+    } else if (name.toLowerCase().contains('bni')) {
+      cardColor = const Color(0xFF0A3A72); // BNI navy blue
+      gradients = [const Color(0xFF081F3F), const Color(0xFF0A3A72)];
+    } else if (name.toLowerCase().contains('mandiri')) {
+      cardColor = const Color(0xFF0C5CA7); // Mandiri blue
+      gradients = [const Color(0xFF092E57), const Color(0xFF0C5CA7)];
     } else if (name.toLowerCase().contains('bca')) {
       cardColor = const Color(0xFF0D47A1); // BCA dark blue
       gradients = [const Color(0xFF0A2540), const Color(0xFF1A365D)];
@@ -296,14 +318,28 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      type.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.w700,
-                        color: textOnCardColor.withValues(alpha: 0.7),
-                      ),
+                    Row(
+                      children: [
+                        if (logoAsset != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Image.asset(
+                              logoAsset,
+                              width: 48,
+                              height: 24,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        Text(
+                          type.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 1.5,
+                            fontWeight: FontWeight.w700,
+                            color: textOnCardColor.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
                     ),
                     if (isDefault)
                       Container(
@@ -626,6 +662,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: nameController,
+                      onChanged: (_) => setModalState(() {}),
                       decoration: InputDecoration(
                         hintText: selectedType == 'E-Wallet'
                             ? 'Misal: GoPay, DANA'
@@ -645,7 +682,35 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                           ? 'Nama tidak boleh kosong'
                           : null,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
+                    if (_getPaymentMethodLogoAsset(
+                          nameController.text.trim(),
+                        ) !=
+                        null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Row(
+                          children: [
+                            Image.asset(
+                              _getPaymentMethodLogoAsset(
+                                nameController.text.trim(),
+                              )!,
+                              width: 60,
+                              height: 24,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Logo akan digunakan di daftar pembayaran',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 8),
 
                     // Account Number Input
                     Text(

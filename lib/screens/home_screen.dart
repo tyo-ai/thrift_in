@@ -75,8 +75,14 @@ class _HomeScreenState extends State<HomeScreen> {
         _hasMore = products.length == _pageSize;
         _offset = products.length;
         _isLoading = false;
+        // apply filter inline to avoid nested setState
+        if (_selectedCategory == 0) {
+          _products = List.from(products);
+        } else {
+          final cat = _categories[_selectedCategory];
+          _products = products.where((p) => p['category'] == cat).toList();
+        }
       });
-      _filterProducts();
     } catch (_) {
       if (!mounted) return;
 
@@ -105,8 +111,14 @@ class _HomeScreenState extends State<HomeScreen> {
         _offset += products.length;
         _hasMore = products.length == _pageSize;
         _isLoadingMore = false;
+        // apply filter inline to avoid nested setState
+        if (_selectedCategory == 0) {
+          _products = List.from(_allProducts);
+        } else {
+          final cat = _categories[_selectedCategory];
+          _products = _allProducts.where((p) => p['category'] == cat).toList();
+        }
       });
-      _filterProducts();
     } catch (_) {
       if (!mounted) return;
       setState(() => _isLoadingMore = false);
@@ -142,7 +154,13 @@ class _HomeScreenState extends State<HomeScreen> {
           final id = int.tryParse(_liveProducts[i]['id']?.toString() ?? '');
           _liveProducts[i]['isFavorite'] = (id != null && favoriteIds.contains(id)) ? 1 : 0;
         }
-        _filterProducts();
+        // apply filter inline to avoid nested setState
+        if (_selectedCategory == 0) {
+          _products = List.from(_allProducts);
+        } else {
+          final cat = _categories[_selectedCategory];
+          _products = _allProducts.where((p) => p['category'] == cat).toList();
+        }
       });
     } catch (_) {
       // Ignore errors during silent refresh
@@ -160,16 +178,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _filterProducts() {
-    if (_selectedCategory == 0) {
-      setState(() {
+    if (!mounted) return;
+    setState(() {
+      if (_selectedCategory == 0) {
         _products = List.from(_allProducts);
-      });
-    } else {
-      final cat = _categories[_selectedCategory];
-      setState(() {
+      } else {
+        final cat = _categories[_selectedCategory];
         _products = _allProducts.where((p) => p['category'] == cat).toList();
-      });
-    }
+      }
+    });
   }
 
   String _text(dynamic value, [String fallback = '-']) {
@@ -653,6 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final newValue = !isFavorite;
       final productId = product['id'];
 
+      if (!mounted) return;
       setState(() {
         _products[index] = Map<String, dynamic>.from(product)
           ..['isFavorite'] = newValue ? 1 : 0;

@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
 import '../services/chat_service.dart';
 import '../services/chat_notification_service.dart';
+import '../services/presence_service.dart';
 import '../services/supabase_config.dart';
 import '../services/user_service.dart';
 import '../widgets/cached_product_image.dart';
@@ -44,8 +45,10 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
   bool _isSendingImage = false;
+  bool _isOtherUserOnline = false;
   XFile? _selectedImage;
   RealtimeChannel? _roomRealtimeChannel;
+  RealtimeChannel? _presenceChannel;
   Timer? _markReadDebounce;
 
   Map<String, dynamic> get _product {
@@ -85,6 +88,30 @@ class _ChatScreenState extends State<ChatScreen> {
     _prepareRoom();
   }
 
+  /// Get the other user's ID from the room data.
+  int? get _otherUserId {
+    final currentUserId = UserService.currentUserId;
+    final room = _room;
+    if (room == null || currentUserId == null) return null;
+    final isBuyer = room['buyer_id'] == currentUserId;
+    final id = isBuyer ? room['seller_id'] : room['buyer_id'];
+    return int.tryParse(id?.toString() ?? '');
+  }
+
+  /// Subscribe to the other user's realtime presence.
+  /// onPresenceSync fires immediately after subscribing with the current state.
+  void _subscribePresence() {
+    final otherId = _otherUserId;
+    if (otherId == null) return;
+
+    _presenceChannel = PresenceService.instance.subscribeToUserPresence(
+      otherId,
+      (bool isOnline) {
+        if (mounted) setState(() => _isOtherUserOnline = isOnline);
+      },
+    );
+  }
+
   Future<void> _prepareRoom() async {
     try {
       final currentUserId = UserService.currentUserId;
@@ -115,6 +142,8 @@ class _ChatScreenState extends State<ChatScreen> {
         await _loadMessages();
         _markRoomAsReadSoon(roomId, currentUserId);
         _subscribeToRoomMessages(roomId, currentUserId);
+        // Subscribe to other user's presence after room is ready
+        _subscribePresence();
         return;
       }
 
@@ -303,6 +332,12 @@ class _ChatScreenState extends State<ChatScreen> {
     if (channel != null) {
       SupabaseConfig.client.removeChannel(channel);
     }
+    // Unsubscribe from presence channel
+    final presenceChannel = _presenceChannel;
+    _presenceChannel = null;
+    if (presenceChannel != null) {
+      SupabaseConfig.client.removeChannel(presenceChannel);
+    }
     _msgController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -397,9 +432,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Container(
                     width: 10,
                     height: 10,
-                    decoration: const BoxDecoration(
-                      color: AppColors.success,
+                    decoration: BoxDecoration(
+                      color: _isOtherUserOnline
+                          ? AppColors.success
+                          : AppColors.grey400,
                       shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
                     ),
                   ),
                 ),
@@ -412,15 +450,22 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   Text(
                     _otherUserName,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
+                      fontStyle: FontStyle.normal,
                     ),
                   ),
                   Text(
-                    'Online',
-                    style: TextStyle(fontSize: 11, color: AppColors.success),
+                    _isOtherUserOnline ? 'Online' : 'Offline',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _isOtherUserOnline
+                          ? AppColors.success
+                          : AppColors.grey400,
+                      fontStyle: FontStyle.normal,
+                    ),
                   ),
                 ],
               ),

@@ -57,7 +57,7 @@ class ReviewService {
     }
 
     final ratings = results
-        .map((row) => ((row as Map)['rating'] as num).toDouble())
+        .map((row) => double.tryParse((row as Map)['rating']?.toString() ?? '') ?? 0.0)
         .toList();
     final average = ratings.reduce((a, b) => a + b) / ratings.length;
     final summary = {
@@ -116,10 +116,13 @@ class ReviewService {
         .select('id')
         .single();
 
+    final idVal = result['id'];
+    final id = idVal is int ? idVal : int.tryParse(idVal?.toString() ?? '') ?? 0;
+
     await _refreshProductRating(productId);
     _productReviewCache.remove(productId);
     _sellerSummaryCache.remove(sellerId);
-    return result['id'] as int;
+    return id;
   }
 
   static void clearCache() {
@@ -136,7 +139,7 @@ class ReviewService {
     if (reviews.isEmpty) return;
 
     final ratings = reviews
-        .map((row) => ((row as Map)['rating'] as num).toDouble())
+        .map((row) => double.tryParse((row as Map)['rating']?.toString() ?? '') ?? 0.0)
         .toList();
     final average = ratings.reduce((a, b) => a + b) / ratings.length;
 

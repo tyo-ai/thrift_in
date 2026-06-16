@@ -30,48 +30,56 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       title: 'BCA Virtual Account',
       subtitle: 'BCA VA sandbox Duitku',
       icon: Icons.account_balance_rounded,
+      logoAsset: 'assets/icons/bca_logo.png',
       code: 'BC',
     ),
     _CheckoutPaymentMethod(
       title: 'Mandiri Virtual Account',
       subtitle: 'Mandiri VA H2H sandbox Duitku',
       icon: Icons.account_balance_rounded,
+      logoAsset: 'assets/icons/mandiri_logo.png',
       code: 'M2',
     ),
     _CheckoutPaymentMethod(
       title: 'BNI Virtual Account',
       subtitle: 'BNI VA sandbox Duitku',
       icon: Icons.account_balance_rounded,
+      logoAsset: 'assets/icons/bni_logo.png',
       code: 'I1',
     ),
     _CheckoutPaymentMethod(
       title: 'BRI Virtual Account',
       subtitle: 'BRIVA sandbox Duitku',
       icon: Icons.account_balance_rounded,
+      logoAsset: 'assets/icons/bri_logo.png',
       code: 'BR',
     ),
     _CheckoutPaymentMethod(
       title: 'OVO',
       subtitle: 'E-wallet OVO sandbox Duitku',
       icon: Icons.account_balance_wallet_rounded,
+      logoAsset: 'assets/icons/ovo_logo.png',
       code: 'OV',
     ),
     _CheckoutPaymentMethod(
       title: 'DANA',
       subtitle: 'E-wallet DANA sandbox Duitku',
       icon: Icons.account_balance_wallet_rounded,
+      logoAsset: 'assets/icons/dana_logo.png',
       code: 'DA',
     ),
     _CheckoutPaymentMethod(
       title: 'QRIS',
       subtitle: 'QRIS sandbox Duitku',
       icon: Icons.qr_code_rounded,
+      logoAsset: 'assets/icons/qris_logo.png',
       code: 'SP',
     ),
     _CheckoutPaymentMethod(
       title: 'Bayar di Tempat (COD)',
       subtitle: 'Bayar langsung saat barang diterima',
       icon: Icons.handshake_outlined,
+      logoAsset: 'assets/icons/cod_logo.png',
       code: null,
     ),
   ];
@@ -411,6 +419,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       method.icon,
                       method.title,
                       method.subtitle,
+                      method.logoAsset,
                     ),
                   );
                 }),
@@ -630,6 +639,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     IconData icon,
     String title,
     String subtitle,
+    String? logoAsset,
   ) {
     final selected = _selectedPayment == index;
     return GestureDetector(
@@ -647,10 +657,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 22,
-              color: selected ? AppColors.primary : AppColors.textHint,
+            Container(
+              width: 48,
+              height: 40,
+              alignment: Alignment.center,
+              child: logoAsset != null
+                  ? Padding(
+                      padding: () {
+                        if (logoAsset.contains('mandiri')) {
+                          return EdgeInsets.zero;
+                        } else if (logoAsset.contains('qris')) {
+                          return const EdgeInsets.all(3.5);
+                        } else if (logoAsset.contains('cod')) {
+                          return const EdgeInsets.all(5.0);
+                        } else {
+                          return const EdgeInsets.all(7.0);
+                        }
+                      }(),
+                      child: Image.asset(
+                        logoAsset,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            icon,
+                            size: 22,
+                            color: selected ? AppColors.primary : AppColors.textHint,
+                          );
+                        },
+                      ),
+                    )
+                  : Icon(
+                      icon,
+                      size: 22,
+                      color: selected ? AppColors.primary : AppColors.textHint,
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -724,14 +764,17 @@ class _CheckoutPaymentMethod {
   final String title;
   final String subtitle;
   final IconData icon;
+  final String? logoAsset;
   final String? code;
 
   const _CheckoutPaymentMethod({
     required this.title,
     required this.subtitle,
     required this.icon,
+    this.logoAsset,
     required this.code,
   });
 
   bool get isCod => code == null;
 }
+

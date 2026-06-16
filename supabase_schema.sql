@@ -9,6 +9,8 @@ create table if not exists public.users (
   photo_path text,
   gender text,
   birth_date text,
+  is_online boolean not null default false,
+  last_seen text,
   created_at text not null
 );
 

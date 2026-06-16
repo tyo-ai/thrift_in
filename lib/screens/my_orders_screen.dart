@@ -198,24 +198,41 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                 ElevatedButton(
                   onPressed: () async {
                     final reviewerId = UserService.currentUserId;
-                    if (reviewerId == null) return;
+                    if (reviewerId == null) {
+                      _showCustomSnackbar('Silakan login terlebih dahulu', AppColors.error);
+                      return;
+                    }
 
-                    await ReviewService().addReview(
-                      productId: order['product_id'] as int,
-                      orderId: order['id'] as int,
-                      reviewerId: reviewerId,
-                      sellerId: order['seller_id'] as int,
-                      rating: rating,
-                      comment: commentController.text.trim(),
-                    );
+                    final pId = int.tryParse(order['product_id']?.toString() ?? '');
+                    final oId = int.tryParse(order['id']?.toString() ?? '');
+                    final sId = int.tryParse(order['seller_id']?.toString() ?? '');
 
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-                    _showCustomSnackbar(
-                      'Ulasan berhasil disimpan',
-                      AppColors.success,
-                    );
-                    _loadOrders();
+                    if (pId == null || oId == null || sId == null) {
+                      _showCustomSnackbar('Data pesanan tidak valid untuk ulasan', AppColors.error);
+                      return;
+                    }
+
+                    try {
+                      await ReviewService().addReview(
+                        productId: pId,
+                        orderId: oId,
+                        reviewerId: reviewerId,
+                        sellerId: sId,
+                        rating: rating,
+                        comment: commentController.text.trim(),
+                      );
+
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                      _showCustomSnackbar(
+                        'Ulasan berhasil disimpan',
+                        AppColors.success,
+                      );
+                      _loadOrders();
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      _showCustomSnackbar('Gagal mengirim ulasan: $e', AppColors.error);
+                    }
                   },
                   child: const Text('Kirim'),
                 ),
@@ -940,7 +957,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                         ),
                         onPressed: () {
                           Navigator.pop(context);
-                          _deleteOrder(order['id'] as int);
+                          final oId = int.tryParse(order['id']?.toString() ?? '');
+                          if (oId != null) {
+                            _deleteOrder(oId);
+                          } else {
+                            _showCustomSnackbar('ID pesanan tidak valid', AppColors.error);
+                          }
                         },
                         tooltip: 'Hapus Pesanan',
                       ),

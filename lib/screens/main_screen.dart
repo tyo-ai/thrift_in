@@ -5,6 +5,7 @@ import '../services/chat_notification_service.dart';
 import '../services/system_notification_service.dart';
 import '../services/order_service.dart';
 import '../services/user_service.dart';
+import '../services/presence_service.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'sell_screen.dart';
@@ -18,7 +19,8 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   int _chatRefreshVersion = 0;
   int _chatUnreadCount = 0;
@@ -28,6 +30,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pages = List<Widget?>.filled(5, null);
     _pages[0] = const HomeScreen();
     ChatNotificationService.instance.startForCurrentUser(
@@ -35,6 +38,11 @@ class _MainScreenState extends State<MainScreen> {
     );
     SystemNotificationService.instance.startForCurrentUser();
     _loadBadgeCounts();
+    // Mark current user as online when app starts
+    final userId = UserService.currentUserId;
+    if (userId != null) {
+      PresenceService.instance.startTracking(userId);
+    }
   }
 
   void _onNewChatMessage() {
@@ -42,9 +50,30 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final userId = UserService.currentUserId;
+    if (userId == null) return;
+    if (state == AppLifecycleState.resumed) {
+      // App came to foreground
+      PresenceService.instance.startTracking(userId);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive) {
+      // App went to background or was closed
+      PresenceService.instance.stopTracking();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     ChatNotificationService.instance.stop();
     SystemNotificationService.instance.stop();
+    // Stop broadcasting presence when screen is destroyed
+    final userId = UserService.currentUserId;
+    if (userId != null) {
+      PresenceService.instance.stopTracking();
+    }
     super.dispose();
   }
 
