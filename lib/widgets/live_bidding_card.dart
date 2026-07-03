@@ -14,9 +14,9 @@ class LiveBiddingCard extends StatefulWidget {
 
 class _LiveBiddingCardState extends State<LiveBiddingCard> {
   late Timer _timer;
-  int _hours = 4;
-  int _minutes = 50;
-  int _seconds = 23;
+  int _hours = 0;
+  int _minutes = 0;
+  int _seconds = 30;
 
   @override
   void initState() {
