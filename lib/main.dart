@@ -1,3 +1,4 @@
+import 'package:in_app_update/in_app_update.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,8 +24,14 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   try {
     await SupabaseConfig.initialize().timeout(const Duration(seconds: 5));
+    // Check for updates
+    InAppUpdate.checkForUpdate().then((info) {
+      if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+        InAppUpdate.performImmediateUpdate();
+      }
+    });
   } catch (error) {
-    debugPrint('Startup Supabase init skipped: $error');
+    debugPrint('Startup error: $error');
   }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

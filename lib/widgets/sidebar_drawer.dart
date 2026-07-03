@@ -198,11 +198,51 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
               icon: Icons.logout,
               label: 'Keluar',
               onTap: () async {
-                await UserService().logout();
-                if (context.mounted) {
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil('/login', (route) => false);
+                final shouldLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    title: const Row(
+                      children: [
+                        Icon(Icons.logout_rounded, color: AppColors.error),
+                        SizedBox(width: 10),
+                        Text('Keluar Akun'),
+                      ],
+                    ),
+                    content: const Text(
+                      'Apakah Anda yakin ingin keluar dari aplikasi? Sesi Anda saat ini akan berakhir.',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.error,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                        ),
+                        child: const Text('Keluar'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (shouldLogout == true) {
+                  await UserService().logout();
+                  if (context.mounted) {
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
                 }
               },
               iconColor: AppColors.error,

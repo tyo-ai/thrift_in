@@ -13,7 +13,7 @@ class OrderService {
     required int sellerId,
     required int totalAmount,
     required String paymentMethod,
-    String status = 'Menunggu',
+    String status = 'Menunggu Pembayaran',
     String? shippingAddress,
     String shippingMethod = 'EcoExpress',
     int shippingCost = 0,

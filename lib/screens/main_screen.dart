@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../services/chat_service.dart';
 import '../services/chat_notification_service.dart';
@@ -22,6 +23,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen>
     with WidgetsBindingObserver {
   int _currentIndex = 0;
+  DateTime? _lastPressed;
   int _chatRefreshVersion = 0;
   int _chatUnreadCount = 0;
   int _orderUnreadCount = 0;
@@ -133,58 +135,96 @@ class _MainScreenState extends State<MainScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages
-            .map((page) => page ?? const SizedBox.shrink())
-            .toList(growable: false),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
+    return PopScope(
+      canPop: _currentIndex != 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        if (_currentIndex != 0) {
+          _selectTab(0);
+          return;
+        }
+
+        final now = DateTime.now();
+        if (_lastPressed == null ||
+            now.difference(_lastPressed!) > const Duration(seconds: 2)) {
+          _lastPressed = now;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.exit_to_app_rounded, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Tekan sekali lagi untuk keluar'),
+                ],
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              margin: const EdgeInsets.all(16),
             ),
-          ],
+          );
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _pages
+              .map((page) => page ?? const SizedBox.shrink())
+              .toList(growable: false),
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  icon: Icons.home_rounded,
-                  outlinedIcon: Icons.home_outlined,
-                  label: 'Beranda',
-                  index: 0,
-                ),
-                _buildNavItem(
-                  icon: Icons.search_rounded,
-                  outlinedIcon: Icons.search,
-                  label: 'Cari',
-                  index: 1,
-                ),
-                _buildCenterButton(),
-                _buildNavItem(
-                  icon: Icons.chat_bubble_rounded,
-                  outlinedIcon: Icons.chat_bubble_outline,
-                  label: 'Chat',
-                  index: 3,
-                  badgeCount: _chatUnreadCount,
-                ),
-                _buildNavItem(
-                  icon: Icons.person_rounded,
-                  outlinedIcon: Icons.person_outline,
-                  label: 'Profil',
-                  index: 4,
-                  badgeCount: _orderUnreadCount,
-                ),
-              ],
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(
+                    icon: Icons.home_rounded,
+                    outlinedIcon: Icons.home_outlined,
+                    label: 'Beranda',
+                    index: 0,
+                  ),
+                  _buildNavItem(
+                    icon: Icons.search_rounded,
+                    outlinedIcon: Icons.search,
+                    label: 'Cari',
+                    index: 1,
+                  ),
+                  _buildCenterButton(),
+                  _buildNavItem(
+                    icon: Icons.chat_bubble_rounded,
+                    outlinedIcon: Icons.chat_bubble_outline,
+                    label: 'Chat',
+                    index: 3,
+                    badgeCount: _chatUnreadCount,
+                  ),
+                  _buildNavItem(
+                    icon: Icons.person_rounded,
+                    outlinedIcon: Icons.person_outline,
+                    label: 'Profil',
+                    index: 4,
+                    badgeCount: _orderUnreadCount,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

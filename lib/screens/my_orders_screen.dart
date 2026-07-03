@@ -294,7 +294,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     if (orderId == null) return;
 
     final currentStatus = order['status']?.toString() ?? 'Menunggu';
-    final statuses = ['Menunggu', 'Diproses', 'Dikirim'];
+    final statuses = ['Menunggu', 'Diproses', 'Dikirim', 'Selesai'];
 
     showModalBottomSheet(
       context: context,
@@ -600,17 +600,18 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     final totalAmount = order['total_amount'] ?? 0;
     final createdAt = order['created_at'] ?? '';
     final isOpened = order['is_opened'] == true;
+    final bool isUnchanged = (status == 'Menunggu' && !isOpened);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isOpened
-            ? AppColors.cardSurface
+        color: !isUnchanged
+            ? Colors.white
             : AppColors.error.withValues(alpha: 0.035),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isOpened
-              ? Colors.transparent
+          color: !isUnchanged
+              ? const Color(0xFFE7EEF6)
               : AppColors.error.withValues(alpha: 0.14),
         ),
         boxShadow: [
@@ -631,12 +632,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  children: [
-                    if (!isOpened) ...[
-                      _buildUnreadDot(),
-                      const SizedBox(width: 8),
-                    ],
-                    Icon(
+                    children: [
+                      if (!isOpened && status == 'Menunggu') ...[
+                        _buildUnreadDot(),
+                        const SizedBox(width: 8),
+                      ],
+                      Icon(
                       widget.sellerMode
                           ? Icons.person_outline
                           : Icons.storefront,

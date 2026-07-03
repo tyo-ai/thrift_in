@@ -73,6 +73,17 @@ class NotificationService {
     _cache.remove(userId);
   }
 
+  Future<void> deleteNotification(int notificationId) async {
+    final userId = UserService.currentUserId;
+    if (userId == null) return;
+
+    await SupabaseConfig.client
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+    _cache.remove(userId);
+  }
+
   static void clearCache() => _cache.clear();
 
   Future<void> _sendPushNotification({

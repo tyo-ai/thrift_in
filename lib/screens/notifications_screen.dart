@@ -280,16 +280,68 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     const SizedBox(height: 8),
                     ...unreadNotifs.map(
-                      (n) => NotificationItem(
-                        icon: _getIconData(n['iconName'] ?? ''),
-                        iconBgColor: _getColor(
-                          n['iconBgColorHex'] ?? 'FFFFFFFF',
+                      (n) => Dismissible(
+                        key: Key(n['id'].toString()),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                        iconColor: _getColor(n['iconColorHex'] ?? 'FF000000'),
-                        title: n['title'] ?? '',
-                        time: n['time'] ?? '',
-                        description: n['description'] ?? '',
-                        isUnread: true,
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              title: const Text('Hapus Notifikasi'),
+                              content: const Text('Apakah Anda yakin ingin menghapus notifikasi ini?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: const Text('Batal'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                  ),
+                                  child: const Text('Hapus'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        onDismissed: (direction) async {
+                          await _notificationService.deleteNotification(n['id']);
+                          _loadNotifications(forceRefresh: true);
+                        },
+                        child: NotificationItem(
+                          icon: _getIconData(n['iconName'] ?? ''),
+                          iconBgColor: _getColor(
+                            n['iconBgColorHex'] ?? 'FFFFFFFF',
+                          ),
+                          iconColor: _getColor(n['iconColorHex'] ?? 'FF000000'),
+                          title: n['title'] ?? '',
+                          time: n['time'] ?? '',
+                          description: n['description'] ?? '',
+                          isUnread: true,
+                          onTap: () {
+                             if (n['title'].contains('Pesanan')) {
+                               Navigator.pushNamed(context, '/orders');
+                             } else if (n['title'].contains('Chat')) {
+                               Navigator.pushNamed(context, '/home'); 
+                             }
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -311,16 +363,68 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     const SizedBox(height: 8),
                     ...readNotifs.map(
-                      (n) => NotificationItem(
-                        icon: _getIconData(n['iconName'] ?? ''),
-                        iconBgColor: _getColor(
-                          n['iconBgColorHex'] ?? 'FFFFFFFF',
+                      (n) => Dismissible(
+                        key: Key(n['id'].toString()),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                        iconColor: _getColor(n['iconColorHex'] ?? 'FF000000'),
-                        title: n['title'] ?? '',
-                        time: n['time'] ?? '',
-                        description: n['description'] ?? '',
-                        isUnread: false,
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              title: const Text('Hapus Notifikasi'),
+                              content: const Text('Apakah Anda yakin ingin menghapus notifikasi ini?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: const Text('Batal'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                  ),
+                                  child: const Text('Hapus'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        onDismissed: (direction) async {
+                          await _notificationService.deleteNotification(n['id']);
+                          _loadNotifications(forceRefresh: true);
+                        },
+                        child: NotificationItem(
+                          icon: _getIconData(n['iconName'] ?? ''),
+                          iconBgColor: _getColor(
+                            n['iconBgColorHex'] ?? 'FFFFFFFF',
+                          ),
+                          iconColor: _getColor(n['iconColorHex'] ?? 'FF000000'),
+                          title: n['title'] ?? '',
+                          time: n['time'] ?? '',
+                          description: n['description'] ?? '',
+                          isUnread: false,
+                          onTap: () {
+                             if (n['title'].contains('Pesanan')) {
+                               Navigator.pushNamed(context, '/orders');
+                             } else if (n['title'].contains('Chat')) {
+                               Navigator.pushNamed(context, '/home'); 
+                             }
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
