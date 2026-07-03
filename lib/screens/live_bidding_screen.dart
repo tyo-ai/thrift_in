@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'product_detail_screen.dart';
@@ -16,6 +17,7 @@ class LiveBiddingScreen extends StatefulWidget {
 class _LiveBiddingScreenState extends State<LiveBiddingScreen> {
   static const int _pageSize = ProductService.defaultPageSize;
   final ScrollController _scrollController = ScrollController();
+  Timer? _expiryTimer;
 
   List<Map<String, dynamic>> _biddingItems = [];
   bool _isLoading = true;
@@ -28,6 +30,29 @@ class _LiveBiddingScreenState extends State<LiveBiddingScreen> {
     super.initState();
     _scrollController.addListener(_handleScroll);
     _loadBiddingItems();
+    // Cek setiap detik apakah ada item lelang yang sudah kadaluarsa
+    _expiryTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _removeExpiredItems();
+    });
+  }
+
+  void _removeExpiredItems() {
+    final now = DateTime.now();
+    final before = _biddingItems.length;
+    final updated = _biddingItems.where((item) {
+      final endTimeStr = item['end_time']?.toString();
+      if (endTimeStr == null || endTimeStr.isEmpty) return true;
+      final endTime = DateTime.tryParse(endTimeStr);
+      if (endTime == null) return true;
+      return endTime.isAfter(now);
+    }).toList();
+
+    if (updated.length != before && mounted) {
+      setState(() {
+        _biddingItems = updated;
+        _offset = updated.length;
+      });
+    }
   }
 
   Future<void> _loadBiddingItems({bool forceRefresh = false}) async {
@@ -81,6 +106,7 @@ class _LiveBiddingScreenState extends State<LiveBiddingScreen> {
 
   @override
   void dispose() {
+    _expiryTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
