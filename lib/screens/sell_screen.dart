@@ -52,6 +52,7 @@ class _SellScreenState extends State<SellScreen> {
   };
 
   final List<Map<String, dynamic>> _auctionDurations = const [
+    {'label': '30 Detik', 'duration': Duration(seconds: 30)},
     {'label': '6 Jam', 'duration': Duration(hours: 6)},
     {'label': '12 Jam', 'duration': Duration(hours: 12)},
     {'label': '1 Hari', 'duration': Duration(days: 1)},
