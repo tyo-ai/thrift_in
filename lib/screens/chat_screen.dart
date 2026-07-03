@@ -20,7 +20,7 @@ String _cleanChatDisplayName(String value) {
       .replaceAll(RegExp(r'[/\\]+'), ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
-  return cleaned.isEmpty ? 'User Thriftin' : cleaned;
+  return cleaned.isEmpty ? 'User Thriftinn' : cleaned;
 }
 
 class ChatScreen extends StatefulWidget {
