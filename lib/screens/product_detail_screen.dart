@@ -67,14 +67,43 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _updateTimeLeft(DateTime endTime) {
     final now = DateTime.now();
     if (endTime.isAfter(now)) {
-      setState(() {
-        _timeLeft = endTime.difference(now);
-      });
+      if (mounted) {
+        setState(() {
+          _timeLeft = endTime.difference(now);
+        });
+      }
     } else {
       _timer?.cancel();
-      setState(() {
-        _timeLeft = Duration.zero;
-      });
+      if (mounted) {
+        setState(() {
+          _timeLeft = Duration.zero;
+        });
+        // Tampilkan notif bahwa lelang sudah berakhir
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.error,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            content: const Row(
+              children: [
+                Icon(Icons.gavel_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 10),
+                Text(
+                  'Waktu lelang telah berakhir!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -844,10 +873,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final price = _isBid
         ? (_highestBid > 0 ? _highestBid : _parsePrice(item['price']))
         : _parsePrice(item['price']);
-    final timeText = _timeLeft.inSeconds > 0
-        ? _formatDuration(_timeLeft)
+
+    final bool isExpired = _isBid && _timeLeft.inSeconds <= 0;
+    final timeText = isExpired
+        ? 'Lelang Berakhir'
         : _isBid
-        ? '167:43:11'
+        ? _formatDuration(_timeLeft)
         : '';
 
     if (!_isBid) {
@@ -868,7 +899,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           child: _buildMetric(
             label: 'Sisa Waktu',
             value: timeText,
-            valueColor: const Color(0xFFF59E0B),
+            valueColor: isExpired ? AppColors.error : const Color(0xFFF59E0B),
           ),
         ),
       ],

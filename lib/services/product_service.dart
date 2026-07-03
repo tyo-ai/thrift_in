@@ -60,10 +60,12 @@ class ProductService {
     final cached = _readCache(cacheKey, forceRefresh: forceRefresh);
     if (cached != null) return cached;
 
+    final now = DateTime.now().toUtc().toIso8601String();
     final results = await SupabaseConfig.client
         .from('products')
         .select('*, product_images(*)')
         .eq('isBid', 1)
+        .or('end_time.is.null,end_time.gt.$now')
         .order('id', ascending: false)
         .range(offset, offset + limit - 1);
     final products = await _withFavorites(_mapList(results));
