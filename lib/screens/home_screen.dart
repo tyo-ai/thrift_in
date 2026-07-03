@@ -238,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         titleSpacing: 0,
         title: Text(
-          'ThriftIn',
+          'ThriftInn',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w900,
