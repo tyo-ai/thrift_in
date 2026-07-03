@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:thrift_in/main.dart';
 import 'package:thrift_in/screens/splash_screen.dart';
 
@@ -8,7 +7,11 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const ThriftinApp());
     await tester.pump(const Duration(seconds: 2));
+    expect(find.byType(SplashScreen), findsOneWidget);
+  });
 
+  testWidgets('SplashScreen renders correctly', (WidgetTester tester) async {
+    await tester.pumpWidget(const ThriftinApp());
     expect(find.byType(SplashScreen), findsOneWidget);
   });
 }
