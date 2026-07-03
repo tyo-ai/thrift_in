@@ -91,7 +91,7 @@ class _SavedScreenState extends State<SavedScreen>
       return const Text(
         'Belum ada rating',
         style: TextStyle(
-          fontSize: 9,
+          fontSize: 9.5,
           color: AppColors.textHint,
           fontWeight: FontWeight.w700,
         ),
