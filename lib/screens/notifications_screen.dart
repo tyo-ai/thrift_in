@@ -95,7 +95,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Thriftinn',
+          'Thriftin',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w800,
