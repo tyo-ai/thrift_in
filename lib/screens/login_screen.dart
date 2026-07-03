@@ -147,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
 
               // Title
               Text(
-                'Selamat datang di Thriftin',
+                'Selamat datang di Thriftinn',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
