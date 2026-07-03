@@ -1,120 +1,127 @@
-# ThriftIn
+<div align="center">
+  <img src="assets/icons/icon.png" alt="ThriftIn Logo" width="120" height="120">
+  
+  # 🛍️ ThriftIn
+  
+  **Your Modern Preloved & Thrift Marketplace**
+  
+  [![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)](https://flutter.dev)
+  [![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev/)
+  [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+  [![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=for-the-badge&logo=Firebase&logoColor=white)](https://firebase.google.com/)
+</div>
 
-ThriftIn adalah aplikasi marketplace mobile untuk jual beli barang thrift dan preloved. Aplikasi ini dibuat dengan Flutter dan Supabase, dengan fokus ke alur belanja yang cukup lengkap: lihat produk, simpan favorit, checkout, live bidding, chat penjual-pembeli, sampai review setelah transaksi.
+<br>
 
-Project ini masih ditujukan untuk kebutuhan pengembangan/demo, jadi beberapa bagian seperti policy database, payment flow, dan deployment backend masih perlu disesuaikan lagi kalau mau dipakai untuk produksi.
+ThriftIn adalah aplikasi mobile marketplace modern yang dirancang khusus untuk transaksi jual beli barang *thrift* dan *preloved*. Didesain dengan estetika yang bersih dan pengalaman pengguna yang mulus, ThriftIn memungkinkan pengguna untuk berperan sebagai **Pembeli** sekaligus **Penjual** dalam satu akun terpusat.
 
-## Fitur
+---
 
-- Login, register, lengkapi profil, dan reset password dengan OTP.
-- Beranda produk dengan kategori, pencarian, dan detail produk.
-- Upload produk untuk dijual, termasuk foto, harga, kondisi, lokasi, dan deskripsi.
-- Favorit dan keranjang belanja.
-- Checkout dan riwayat pesanan.
-- Mode live bidding untuk produk lelang.
-- Chat antara pembeli dan penjual berdasarkan produk.
-- Notifikasi aktivitas aplikasi.
-- Review dan rating setelah transaksi.
-- Laporan penjualan untuk penjual.
-- Integrasi pembayaran Duitku sandbox lewat Supabase Edge Function.
+## ✨ Fitur Unggulan
 
-## Teknologi
+- 🔄 **Peran Ganda**: Satu akun untuk menjelajah barang preloved (Pembeli) dan mengelola toko thrift Anda sendiri (Penjual).
+- 🔨 **Live Bidding (Lelang)**: Fitur lelang *real-time* dengan batas waktu (*timer*) untuk penawaran harga tertinggi.
+- 💬 **Real-time Chat**: Komunikasi langsung antara pembeli dan penjual berbasis produk dengan indikator pesan belum terbaca (*unread count*).
+- 🔔 **Push Notifications**: Pemberitahuan sistem terintegrasi menggunakan **Firebase Cloud Messaging (FCM)** untuk order dan chat baru.
+- 💳 **Checkout & Payment**: Simulasi sistem *checkout* dengan integrasi **Duitku Sandbox** via *Supabase Edge Functions*.
+- 🔐 **Autentikasi Aman**: Login, registrasi, dan reset password menggunakan Email OTP via **Resend**.
+- 📲 **In-App Updates**: Dukungan pembaruan otomatis langsung dari dalam aplikasi.
+- 🎨 **Modern UI/UX**: Navigasi kustom *Bottom Tab Bar* yang responsif, bersih, dengan skema warna yang memanjakan mata.
 
-- Flutter
-- Dart
-- Supabase PostgreSQL
-- Supabase Storage
-- Supabase Edge Functions
-- Duitku sandbox
-- Resend untuk email OTP reset password
+---
 
-## Struktur Singkat
+## 🛠️ Tech Stack & Arsitektur
+
+<table align="center">
+  <tr>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=flutter" width="48" height="48" alt="Flutter" />
+      <br>Flutter
+    </td>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=supabase" width="48" height="48" alt="Supabase" />
+      <br>Supabase
+    </td>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=postgres" width="48" height="48" alt="PostgreSQL" />
+      <br>PostgreSQL
+    </td>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=firebase" width="48" height="48" alt="Firebase" />
+      <br>FCM
+    </td>
+  </tr>
+</table>
+
+- **Frontend**: Flutter & Dart
+- **Backend (BaaS)**: Supabase (PostgreSQL, Storage, Edge Functions)
+- **Notifikasi**: Firebase Cloud Messaging (FCM)
+- **Payment Gateway**: Duitku (Sandbox Mode)
+- **Email Service**: Resend (OTP Delivery)
+
+---
+
+## 📁 Struktur Direktori
 
 ```text
-lib/
-  screens/      halaman utama aplikasi
-  services/     akses data, Supabase, chat, order, payment, notifikasi
-  widgets/      komponen UI yang dipakai ulang
-  theme/        warna dan style aplikasi
-
-supabase/
-  functions/    edge function untuk Duitku dan reset password
-  migrations/   migration tambahan
-
-docs/
-  PRD_ThriftIn_Presentation.md
+thriftin/
+├── 📱 lib/
+│   ├── screens/       # Halaman utama aplikasi (Home, Login, Chat, Checkout, dll)
+│   ├── services/      # Logika backend (Supabase, FCM, Duitku, dll)
+│   ├── widgets/       # Komponen UI Reusable (Cards, Custom Nav Bar, Buttons)
+│   └── theme/         # Konfigurasi warna, tipografi, dan gaya aplikasi
+├── ⚙️ supabase/
+│   ├── functions/     # Edge Functions (create-duitku-transaction, password-reset-otp)
+│   └── migrations/    # Skema migrasi database SQL tambahan
+├── 📄 docs/           # PRD (Product Requirements Document) & presentasi
+└── 🗄️ supabase_schema.sql # Skema database PostgreSQL utama
 ```
 
-## Menjalankan Project
+---
 
-Pastikan Flutter sudah terpasang, lalu jalankan:
+## 🚀 Panduan Menjalankan Proyek
 
+Pastikan Anda telah menginstal **Flutter SDK** versi terbaru.
+
+**1. Kloning Repositori & Install Dependensi**
 ```bash
+git clone https://github.com/Kaa278/thriftin.git
+cd thriftin
 flutter pub get
-flutter run
 ```
 
-Secara default aplikasi sudah punya konfigurasi Supabase di `lib/services/supabase_config.dart`. Kalau ingin memakai project Supabase lain, jalankan dengan `dart-define`:
-
+**2. Setup Environment / Konfigurasi Supabase**
+Aplikasi menggunakan konfigurasi *default* di `lib/services/supabase_config.dart`. Untuk menggunakan *project* Supabase Anda sendiri, jalankan dengan argumen ini:
 ```bash
 flutter run \
-  --dart-define=SUPABASE_URL=your_supabase_url \
-  --dart-define=SUPABASE_ANON_KEY=your_supabase_anon_key
+  --dart-define=SUPABASE_URL=YOUR_SUPABASE_URL \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
-## Setup Database
+**3. Setup Database (Jika pakai instance Supabase sendiri)**
+Jalankan file SQL editor di dasbor Supabase Anda sesuai urutan:
+1. `supabase_schema.sql` (Skema utama)
+2. `supabase/migrations/20260612074545_add_password_reset_otps.sql` (Tabel OTP)
 
-Skema utama ada di:
-
-```text
-supabase_schema.sql
-```
-
-Migration tambahan untuk OTP reset password ada di:
-
-```text
-supabase/migrations/20260612074545_add_password_reset_otps.sql
-```
-
-Untuk setup awal, import schema ke Supabase SQL editor atau jalankan lewat Supabase CLI sesuai kebutuhan project.
-
-## Edge Function
-
-Project ini memakai dua Edge Function:
-
-- `create-duitku-transaction` untuk membuat transaksi Duitku sandbox.
-- `password-reset-otp` untuk request dan verifikasi OTP reset password.
-
-Contoh deploy:
-
+**4. Deploy Edge Functions (Opsional)**
 ```bash
 supabase functions deploy create-duitku-transaction
 supabase functions deploy password-reset-otp
-```
 
-Secret yang perlu disiapkan menyesuaikan function yang dipakai:
-
-```bash
+# Set Secrets
 supabase secrets set DUITKU_MERCHANT_CODE=...
 supabase secrets set DUITKU_API_KEY=...
-supabase secrets set DUITKU_ENVIRONMENT=sandbox
 supabase secrets set RESEND_API_KEY=...
-supabase secrets set RESEND_FROM_EMAIL=...
-supabase secrets set RESEND_FROM_NAME=ThriftIn
 ```
 
-Catatan detail untuk Duitku ada di `supabase/functions/create-duitku-transaction/README.md`.
+---
 
-## Catatan Pengembangan
+## 🔒 Catatan Pengembangan (MVP)
+- Proyek ini sedang dalam fase pengembangan awal (MVP) yang ditujukan untuk presentasi dan demonstrasi.
+- Beberapa bagian seperti *Payment Flow*, RLS (Row Level Security) Database, dan Firebase Production Keys mungkin perlu dikonfigurasi lebih ketat jika ingin di-deploy ke fase *Production*.
+- Dokumentasi Produk lengkap bisa dibaca di `docs/PRD_ThriftIn_Presentation.md`.
 
-- Aplikasi memakai Supabase sebagai backend utama untuk data produk, user, order, chat, bidding, review, dan notifikasi.
-- Beberapa flow masih dibuat untuk kebutuhan demo, terutama bagian transaksi dan keamanan database.
-- Jika akan dilanjutkan ke produksi, bagian RLS policy, validasi pembayaran, dan penyimpanan password perlu ditinjau ulang lebih dulu.
-
-## Dokumentasi
-
-Dokumen kebutuhan produk dapat dilihat di:
-
-```text
-docs/PRD_ThriftIn_Presentation.md
-```
+<br>
+<p align="center">
+  Dibuat dengan ❤️ oleh <b>ThriftIn Team</b>.
+</p>
