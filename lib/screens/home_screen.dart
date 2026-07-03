@@ -267,7 +267,13 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.primary,
               size: 22,
             ),
-
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: Icon(
               Icons.shopping_cart_outlined,
