@@ -79,30 +79,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           _timeLeft = Duration.zero;
         });
         // Tampilkan notif bahwa lelang sudah berakhir
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.error,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            content: const Row(
-              children: [
-                Icon(Icons.gavel_rounded, color: Colors.white, size: 18),
-                SizedBox(width: 10),
-                Text(
-                  'Waktu lelang telah berakhir!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppColors.error,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              content: const Row(
+                children: [
+                  Icon(Icons.gavel_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 10),
+                  Text(
+                    'Waktu lelang telah berakhir!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              duration: const Duration(seconds: 3),
             ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+          );
+        });
       }
     }
   }

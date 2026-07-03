@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/sidebar_drawer.dart';
@@ -40,12 +41,16 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingMore = false;
   bool _hasMore = true;
   int _offset = 0;
+  Timer? _expiryTimer;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
     _loadProducts();
+    _expiryTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _removeExpiredItems();
+    });
   }
 
   Future<void> _loadProducts({bool forceRefresh = false}) async {
@@ -69,18 +74,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!mounted) return;
 
+      final now = DateTime.now();
+      final filteredLive = liveProducts.where((item) {
+        final endTimeStr = item['end_time']?.toString();
+        if (endTimeStr == null || endTimeStr.isEmpty) return true;
+        final endTime = DateTime.tryParse(endTimeStr);
+        if (endTime == null) return true;
+        return endTime.isAfter(now);
+      }).toList();
+
+      final filteredProducts = products.where((item) {
+        final isBid = item['isBid'] == 1 || item['isBid'] == true;
+        if (!isBid) return true;
+        final endTimeStr = item['end_time']?.toString();
+        if (endTimeStr == null || endTimeStr.isEmpty) return true;
+        final endTime = DateTime.tryParse(endTimeStr);
+        if (endTime == null) return true;
+        return endTime.isAfter(now);
+      }).toList();
+
       setState(() {
-        _liveProducts = liveProducts;
-        _allProducts = products;
+        _liveProducts = filteredLive;
+        _allProducts = filteredProducts;
         _hasMore = products.length == _pageSize;
         _offset = products.length;
         _isLoading = false;
         // apply filter inline to avoid nested setState
         if (_selectedCategory == 0) {
-          _products = List.from(products);
+          _products = List.from(filteredProducts);
         } else {
           final cat = _categories[_selectedCategory];
-          _products = products.where((p) => p['category'] == cat).toList();
+          _products = filteredProducts.where((p) => p['category'] == cat).toList();
         }
       });
     } catch (_) {
@@ -106,8 +130,20 @@ class _HomeScreenState extends State<HomeScreen> {
         offset: _offset,
       );
       if (!mounted) return;
+
+      final now = DateTime.now();
+      final filteredProducts = products.where((item) {
+        final isBid = item['isBid'] == 1 || item['isBid'] == true;
+        if (!isBid) return true;
+        final endTimeStr = item['end_time']?.toString();
+        if (endTimeStr == null || endTimeStr.isEmpty) return true;
+        final endTime = DateTime.tryParse(endTimeStr);
+        if (endTime == null) return true;
+        return endTime.isAfter(now);
+      }).toList();
+
       setState(() {
-        _allProducts.addAll(products);
+        _allProducts.addAll(filteredProducts);
         _offset += products.length;
         _hasMore = products.length == _pageSize;
         _isLoadingMore = false;
@@ -339,8 +375,49 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _removeExpiredItems() {
+    final now = DateTime.now();
+    
+    // Filter _liveProducts
+    final beforeLive = _liveProducts.length;
+    final updatedLive = _liveProducts.where((item) {
+      final endTimeStr = item['end_time']?.toString();
+      if (endTimeStr == null || endTimeStr.isEmpty) return true;
+      final endTime = DateTime.tryParse(endTimeStr);
+      if (endTime == null) return true;
+      return endTime.isAfter(now);
+    }).toList();
+
+    // Filter _allProducts
+    final beforeAll = _allProducts.length;
+    final updatedAll = _allProducts.where((item) {
+      final isBid = item['isBid'] == 1 || item['isBid'] == true;
+      if (!isBid) return true; // Tetap simpan produk non-lelang
+      final endTimeStr = item['end_time']?.toString();
+      if (endTimeStr == null || endTimeStr.isEmpty) return true;
+      final endTime = DateTime.tryParse(endTimeStr);
+      if (endTime == null) return true;
+      return endTime.isAfter(now);
+    }).toList();
+
+    if ((updatedLive.length != beforeLive || updatedAll.length != beforeAll) && mounted) {
+      setState(() {
+        _liveProducts = updatedLive;
+        _allProducts = updatedAll;
+        // Terapkan filter kategori kembali ke _products
+        if (_selectedCategory == 0) {
+          _products = List.from(_allProducts);
+        } else {
+          final cat = _categories[_selectedCategory];
+          _products = _allProducts.where((p) => p['category'] == cat).toList();
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _expiryTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
